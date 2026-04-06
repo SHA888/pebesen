@@ -1,33 +1,35 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import pluginVue from 'eslint-plugin-vue';
-import * as parserVue from 'vue-eslint-parser';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import svelte from 'eslint-plugin-svelte';
 
 export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  ...pluginVue.configs['flat/essential'],
+  ...svelte.configs['flat/recommended'],
   eslintConfigPrettier,
-  {
-    files: ['**/*.vue'],
-    languageOptions: {
-      parser: parserVue,
-      parserOptions: {
-        parser: tseslint.parser,
-        ecmaVersion: 2024,
-        sourceType: 'module',
-      },
-    },
-  },
   {
     files: ['**/*.ts', '**/*.js'],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
     },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-undef': 'off',
+    },
   },
   {
-    ignores: ['build/', '.svelte-kit/', 'dist/'],
+    files: ['**/*.svelte'],
+    languageOptions: {
+      parser: svelte.parser,
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-undef': 'off',
+    },
+  },
+  {
+    ignores: ['build/', '.svelte-kit/', 'dist/', 'node_modules/'],
   },
 ];
