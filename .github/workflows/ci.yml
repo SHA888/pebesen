@@ -40,6 +40,9 @@ jobs:
       - name: Test
         run: cargo test --all-features
 
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
       - name: Audit
         run: cargo audit
 

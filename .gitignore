@@ -149,4 +149,3 @@ temp/
 
 # Lock files (keep package-lock.json but ignore others if present)
 yarn.lock
-pnpm-lock.yaml
