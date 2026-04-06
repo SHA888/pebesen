@@ -1,6 +1,13 @@
 # Pebesen
 
+![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
+![Status: Pre-alpha](https://img.shields.io/badge/Status-Pre--alpha-orange.svg)
+![Rust](https://img.shields.io/badge/Rust-2024%20edition-orange.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg)
+
 > Structured conversations. Approachable by everyone. Built for the users most platforms ignore.
+
+**📜 Licensed under AGPL-3.0 — Free for self-hosting and community use.**
 
 ---
 
@@ -269,8 +276,20 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for detailed guidelines.
 
 ## License
 
-AGPL-3.0 — free for self-hosting and community use.
-Commercial license available for hosted deployments and enterprise features.
+This project is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0).
+
+- ✅ **Free for self-hosting and community use**
+- ✅ **Source code available** with network copyleft provisions
+- 📄 **See [LICENSE](./LICENSE)** for the full license text
+
+<!-- ### Commercial License
+
+Commercial licensing is available for:
+- Hosted deployments and SaaS offerings
+- Enterprise features and support
+- Custom development and integration
+
+Contact us for commercial licensing options. -->
 
 ---
 
