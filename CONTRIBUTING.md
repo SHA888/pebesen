@@ -48,7 +48,7 @@ cp .env.example .env
 
 Required variables:
 - `DATABASE_URL` - PostgreSQL connection
-- `REDIS_URL` - Redis connection  
+- `REDIS_URL` - Redis connection
 - `MEILISEARCH_URL` - Search service URL
 - `MEILISEARCH_MASTER_KEY` - Search service key
 - `JWT_SECRET` - At least 64 characters

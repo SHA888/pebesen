@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "crates/api",
-    "crates/core", 
+    "crates/core",
     "crates/db",
     "crates/search",
     "crates/notifications",
@@ -62,3 +62,6 @@ config = "0.14"
 
 # Testing
 mockall = "0.12"
+
+# Development tools
+cargo-watch = "8.5"

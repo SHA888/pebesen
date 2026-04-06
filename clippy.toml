@@ -4,7 +4,7 @@
 # Cognitive complexity limit
 cognitive-complexity-threshold = 30
 
-# Type complexity limit  
+# Type complexity limit
 type-complexity-threshold = 250
 
 # Too many arguments threshold

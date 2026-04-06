@@ -10,7 +10,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 ## Pre-Phase: Repository and Tooling Bootstrap ✅
 
 > Gate: nothing else starts until this block is complete.
-> 
+>
 > **Status: COMPLETED** - All tooling, workspace, and infrastructure setup is done.
 
 ### P.1 Rust Workspace

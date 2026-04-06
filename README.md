@@ -54,9 +54,9 @@ These four decisions compose into a system where institutional knowledge accumul
 
 ### Secondary Segments (real pain, addressable in Phase 2+)
 
-**Context multiplexers** — consultants, DevRel, open source contributors in 10+ communities simultaneously  
-**Neurodivergent users** — ADHD/autism users harmed at the model level, not just the surface level  
-**Longitudinal participants** — community veterans who hold institutional memory with no platform support  
+**Context multiplexers** — consultants, DevRel, open source contributors in 10+ communities simultaneously
+**Neurodivergent users** — ADHD/autism users harmed at the model level, not just the surface level
+**Longitudinal participants** — community veterans who hold institutional memory with no platform support
 **Knowledge consumers (lurkers)** — the ~75% of any community who read without posting
 
 ---
@@ -91,7 +91,7 @@ This project was preceded by structured demand validation across five stages:
 - **Stage 4**: Behavior proxies exist and are monetizing. Forum-style threading features are being adopted industry-wide — confirming that structured conversation is a validated need.
 - **Stage 5**: Structural defensibility confirmed. Seat-based pricing models are structurally incompatible with lurker-first design. Casual-UX brand positioning is structurally incompatible with mandatory topic discipline. Single-identity multi-community requires an identity layer rebuild that existing platforms have not undertaken.
 
-See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for system design.  
+See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for system design.
 See [`TODO.md`](./TODO.md) for phased build plan.
 
 ---
@@ -134,12 +134,12 @@ Full self-hosting documentation: `docs/self-hosting.md` *(Phase 2)*
 
 ## License
 
-AGPL-3.0 — free for self-hosting and community use.  
+AGPL-3.0 — free for self-hosting and community use.
 Commercial license available for hosted deployments and enterprise features.
 
 ---
 
 ## Status
 
-**Pre-alpha.** Core architecture under active development.  
+**Pre-alpha.** Core architecture under active development.
 See [`TODO.md`](./TODO.md) for current phase and open tasks.
