@@ -108,14 +108,88 @@ See [`TODO.md`](./TODO.md) for phased build plan.
 | Frontend | TypeScript + SvelteKit (pnpm) | Lightweight, fast, component-scoped CSS |
 | Self-host | Docker Compose | Single-command deployment |
 | Package managers | pnpm (TS), uv (Python tools), Cargo (Rust) | Per-language best-in-class |
+| Code Quality | Pre-commit hooks, CI/CD | Automated formatting, linting, testing |
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- **Rust 1.85+** (2024 edition)
+- **Node.js 22+** (latest LTS)
+- **pnpm 9+**
+- **Docker & Docker Compose**
+- **Python 3.8+** (for pre-commit hooks)
+- **uv** (recommended Python package manager)
+
+### One-Command Setup
+
+```bash
+# Clone and set up everything
+git clone https://github.com/SHA888/pebesen
+cd pebesen
+make setup
+
+# Start development environment
+make dev
+```
+
+### Manual Setup
+
+```bash
+# Clone
+git clone https://github.com/SHA888/pebesen
+cd pebesen
+
+# Install dependencies
+make setup
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# Start development
+make dev
+```
+
+### Development Commands
+
+```bash
+make help          # Show all available commands
+make dev           # Start full development environment
+make dev-backend   # Backend only
+make dev-frontend  # Frontend only
+make test          # Run all tests
+make lint          # Run all linters
+make format        # Format all code
+make check         # Run all checks (format + lint + test)
+make db-reset      # Reset database
+make clean         # Clean build artifacts
+```
 
 ---
 
 ## Self-Hosting
 
+### Development Setup
+
+```bash
+# Start database services
+make db-up
+
+# Run migrations
+make migrate
+
+# Start application
+make dev
+```
+
+### Production Setup
+
 ```bash
 # Clone
-git clone https://github.com/pebesen/pebesen
+git clone https://github.com/SHA888/pebesen
 cd pebesen
 
 # Configure
@@ -132,6 +206,67 @@ Full self-hosting documentation: `docs/self-hosting.md` *(Phase 2)*
 
 ---
 
+## Development
+
+### Architecture
+
+- **Rust Workspace**: 6 crates (api, core, db, search, notifications, bin)
+- **Frontend**: SvelteKit with TypeScript and TailwindCSS
+- **Database**: PostgreSQL with migrations
+- **Search**: Meilisearch for full-text search
+- **Cache**: Redis for session state and pub/sub
+
+### Code Quality
+
+- **Pre-commit hooks**: Automatic formatting and linting
+- **CI/CD**: GitHub Actions for automated testing
+- **Security**: Automated dependency audits
+- **Documentation**: Comprehensive setup and API docs
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run `make check` to ensure quality
+5. Submit a pull request
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for detailed guidelines.
+
+---
+
+## Project Status
+
+**Phase**: Pre-Phase Complete ✅
+**Next**: Phase 0 MVP Implementation
+
+### Completed ✅
+
+- ✅ Rust workspace with 2024 edition
+- ✅ SvelteKit frontend with TypeScript
+- ✅ Docker Compose development environment
+- ✅ Database migrations and extensions
+- ✅ CI/CD pipeline with GitHub Actions
+- ✅ Pre-commit hooks and code quality tools
+- ✅ Comprehensive Makefile for development
+- ✅ Documentation and contribution guidelines
+
+### In Progress 🚧
+
+- 🚧 Phase 0: Core Architecture Validation
+- 🚧 Authentication system (users, spaces, memberships)
+- 🚧 Real-time messaging with WebSocket
+- 🚧 Topic-based conversation structure
+- 🚧 Full-text search integration
+
+### Planned 📋
+
+- 📋 Phase 1: Community retention features
+- 📋 Phase 2: Expertise discovery and SEO
+- 📋 Phase 3: Advanced features and federation
+
+---
+
 ## License
 
 AGPL-3.0 — free for self-hosting and community use.
@@ -141,5 +276,5 @@ Commercial license available for hosted deployments and enterprise features.
 
 ## Status
 
-**Pre-alpha.** Core architecture under active development.
-See [`TODO.md`](./TODO.md) for current phase and open tasks.
+**Pre-alpha.** Core infrastructure complete, starting MVP development.
+See [`TODO.md`](./TODO.md) for detailed implementation roadmap.

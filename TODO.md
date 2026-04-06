@@ -885,7 +885,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] `docs/self-hosting.md`: prerequisites, step-by-step, SMTP config, custom domain + TLS, troubleshooting
 - [ ] `docs/upgrade.md`: pull image, run compose, rollback procedure
 - [ ] `docs/backup.md`: pg_dump, volume backup, recommended schedule
-- [ ] Publish to GHCR via CI on tag: `ghcr.io/pebesen/pebesen:latest` + semver tag
+- [ ] Publish to GHCR via CI on tag: `ghcr.io/SHA888/pebesen:latest` + semver tag
 - [ ] Test complete install on clean Ubuntu 24.04 LTS VPS (1GB RAM)
 
 ---
