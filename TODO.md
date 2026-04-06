@@ -7,103 +7,105 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ---
 
-## Pre-Phase: Repository and Tooling Bootstrap
+## Pre-Phase: Repository and Tooling Bootstrap ✅
 
 > Gate: nothing else starts until this block is complete.
+> 
+> **Status: COMPLETED** - All tooling, workspace, and infrastructure setup is done.
 
 ### P.1 Rust Workspace
 
-- [ ] Create root `Cargo.toml` with `[workspace]` and `members` list
-  - [ ] Add member: `crates/api`
-  - [ ] Add member: `crates/core`
-  - [ ] Add member: `crates/db`
-  - [ ] Add member: `crates/search`
-  - [ ] Add member: `crates/notifications`
-  - [ ] Add member: `crates/bin`
-- [ ] Create each crate with `cargo new --lib` (except `bin`)
-- [ ] Add shared workspace dependencies in root `Cargo.toml` (`[workspace.dependencies]`)
-  - [ ] `tokio` with full features
-  - [ ] `axum` latest stable
-  - [ ] `sqlx` with `postgres`, `uuid`, `time`, `runtime-tokio` features
-  - [ ] `serde` + `serde_json`
-  - [ ] `tracing` + `tracing-subscriber`
-  - [ ] `uuid` with `v4`, `serde` features
-  - [ ] `argon2`
-  - [ ] `jsonwebtoken`
-  - [ ] `redis` async
-- [ ] Configure `rustfmt.toml` (edition 2021, max width 100)
-- [ ] Configure `clippy.toml` — add `#![deny(clippy::all)]` to each crate root
-- [ ] Confirm `cargo build` succeeds on empty crates
+- [x] Create root `Cargo.toml` with `[workspace]` and `members` list
+  - [x] Add member: `crates/api`
+  - [x] Add member: `crates/core`
+  - [x] Add member: `crates/db`
+  - [x] Add member: `crates/search`
+  - [x] Add member: `crates/notifications`
+  - [x] Add member: `crates/bin`
+- [x] Create each crate with `cargo new --lib` (except `bin`)
+- [x] Add shared workspace dependencies in root `Cargo.toml` (`[workspace.dependencies]`)
+  - [x] `tokio` with full features
+  - [x] `axum` latest stable
+  - [x] `sqlx` with `postgres`, `uuid`, `time`, `runtime-tokio` features
+  - [x] `serde` + `serde_json`
+  - [x] `tracing` + `tracing-subscriber`
+  - [x] `uuid` with `v4`, `serde` features
+  - [x] `argon2`
+  - [x] `jsonwebtoken`
+  - [x] `redis` async
+- [x] Configure `rustfmt.toml` (edition 2024, max width 100)
+- [x] Configure `clippy.toml` — add `#![deny(clippy::all)]` to each crate root
+- [x] Confirm `cargo build` succeeds on empty crates
 
 ### P.2 Frontend
 
-- [ ] Scaffold SvelteKit app: `pnpm create svelte@latest frontend`
-  - [ ] Select: TypeScript, ESLint, Prettier, no Playwright (add later)
-- [ ] Configure `pnpm` workspace in root `pnpm-workspace.yaml`
-- [ ] Install base dependencies
-  - [ ] `@sveltejs/adapter-node` for server deployment
-  - [ ] `tailwindcss` + `@tailwindcss/typography`
-  - [ ] `svelte-check`
-- [ ] Configure `eslint.config.js` with TypeScript rules
-- [ ] Configure `prettier.config.js`
-- [ ] Confirm `pnpm dev` starts without errors
+- [x] Scaffold SvelteKit app: `pnpm create svelte@latest frontend`
+  - [x] Select: TypeScript, ESLint, Prettier, no Playwright (add later)
+- [x] Configure `pnpm` workspace in root `pnpm-workspace.yaml`
+- [x] Install base dependencies
+  - [x] `@sveltejs/adapter-node` for server deployment
+  - [x] `tailwindcss` + `@tailwindcss/typography`
+  - [x] `svelte-check`
+- [x] Configure `eslint.config.js` with TypeScript rules
+- [x] Configure `prettier.config.js`
+- [x] Confirm `pnpm dev` starts without errors
 
 ### P.3 Database Bootstrap
 
-- [ ] Write `docker-compose.yml`
-  - [ ] `postgres:16-alpine` service with named volume `postgres_data`
-  - [ ] `redis:7-alpine` service with named volume `redis_data`
-  - [ ] `getmeili/meilisearch:latest` service with named volume `meilisearch_data`
-  - [ ] `caddy:alpine` service with bind-mounted `Caddyfile`
-  - [ ] `app` service (commented out — added in Phase 0 build)
-  - [ ] All services on shared `pebesen_net` bridge network
-  - [ ] Health checks on postgres and redis
-- [ ] Write `.env.example` with all variables and inline comments
-  - [ ] `DATABASE_URL`
-  - [ ] `REDIS_URL`
-  - [ ] `MEILISEARCH_URL` + `MEILISEARCH_MASTER_KEY`
-  - [ ] `JWT_SECRET` (min 64 chars)
-  - [ ] `JWT_ACCESS_TTL_SECONDS` (default 900)
-  - [ ] `JWT_REFRESH_TTL_SECONDS` (default 2592000)
-  - [ ] `SERVER_HOST` + `SERVER_PORT`
-  - [ ] `FRONTEND_URL` (for CORS)
-- [ ] Write first migration `migrations/0001_extensions.sql`
-  - [ ] `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`
-  - [ ] `CREATE EXTENSION IF NOT EXISTS "pg_trgm"`
-- [ ] Confirm `sqlx migrate run` succeeds against fresh DB
+- [x] Write `docker-compose.yml`
+  - [x] `postgres:16-alpine` service with named volume `postgres_data`
+  - [x] `redis:7-alpine` service with named volume `redis_data`
+  - [x] `getmeili/meilisearch:latest` service with named volume `meilisearch_data`
+  - [x] `caddy:alpine` service with bind-mounted `Caddyfile`
+  - [x] `app` service (commented out — added in Phase 0 build)
+  - [x] All services on shared `pebesen_net` bridge network
+  - [x] Health checks on postgres and redis
+- [x] Write `.env.example` with all variables and inline comments
+  - [x] `DATABASE_URL`
+  - [x] `REDIS_URL`
+  - [x] `MEILISEARCH_URL` + `MEILISEARCH_MASTER_KEY`
+  - [x] `JWT_SECRET` (min 64 chars)
+  - [x] `JWT_ACCESS_TTL_SECONDS` (default 900)
+  - [x] `JWT_REFRESH_TTL_SECONDS` (default 2592000)
+  - [x] `SERVER_HOST` + `SERVER_PORT`
+  - [x] `FRONTEND_URL` (for CORS)
+- [x] Write first migration `migrations/0001_extensions.sql`
+  - [x] `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`
+  - [x] `CREATE EXTENSION IF NOT EXISTS "pg_trgm"`
+- [x] Confirm `sqlx migrate run` succeeds against fresh DB
 
 ### P.4 CI Pipeline
 
-- [ ] Create `.github/workflows/ci.yml`
-  - [ ] Trigger: push to `main`, all PRs
-  - [ ] Job: `rust`
-    - [ ] `cargo fmt --check`
-    - [ ] `cargo clippy -- -D warnings`
-    - [ ] `cargo test --all`
-    - [ ] `cargo audit`
-    - [ ] Cache: `~/.cargo/registry`, `target/`
-  - [ ] Job: `frontend`
-    - [ ] `pnpm install --frozen-lockfile`
-    - [ ] `pnpm lint`
-    - [ ] `pnpm check`
-    - [ ] `pnpm test`
-    - [ ] `pnpm audit`
-  - [ ] Job: `docker`
-    - [ ] `docker compose config`
-    - [ ] `docker compose up -d --wait`
-    - [ ] `docker compose down`
-- [ ] Confirm all CI jobs pass on an empty commit
+- [x] Create `.github/workflows/ci.yml`
+  - [x] Trigger: push to `main`, all PRs
+  - [x] Job: `rust`
+    - [x] `cargo fmt --check`
+    - [x] `cargo clippy -- -D warnings`
+    - [x] `cargo test --all`
+    - [x] `cargo audit`
+    - [x] Cache: `~/.cargo/registry`, `target/`
+  - [x] Job: `frontend`
+    - [x] `pnpm install --frozen-lockfile`
+    - [x] `pnpm lint`
+    - [x] `pnpm check`
+    - [x] `pnpm test`
+    - [x] `pnpm audit`
+  - [x] Job: `docker`
+    - [x] `docker compose config`
+    - [x] `docker compose up -d --wait`
+    - [x] `docker compose down`
+- [x] Confirm all CI jobs pass on an empty commit
 
 ### P.5 Developer Experience
 
-- [ ] Write root `Makefile`
-  - [ ] `make dev` — starts docker compose + cargo watch + pnpm dev
-  - [ ] `make migrate` — runs sqlx migrations
-  - [ ] `make test` — runs cargo test + pnpm test
-  - [ ] `make lint` — runs clippy + eslint
-  - [ ] `make reindex` — runs reindex binary
-- [ ] Write `CONTRIBUTING.md` — setup steps, branch naming, PR checklist
-- [ ] Write `.gitignore` — covers Rust, Node, env files, IDE dirs
+- [x] Write root `Makefile`
+  - [x] `make dev` — starts docker compose + cargo watch + pnpm dev
+  - [x] `make migrate` — runs sqlx migrations
+  - [x] `make test` — runs cargo test + pnpm test
+  - [x] `make lint` — runs clippy + eslint
+  - [x] `make reindex` — runs reindex binary
+- [x] Write `CONTRIBUTING.md` — setup steps, branch naming, PR checklist
+- [x] Write `.gitignore` — covers Rust, Node, env files, IDE dirs
 
 ---
 
