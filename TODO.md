@@ -16,12 +16,12 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 ### P.1 Rust Workspace
 
 - [x] Create root `Cargo.toml` with `[workspace]` and `members` list
-  - [x] Add member: `crates/api`
-  - [x] Add member: `crates/core`
-  - [x] Add member: `crates/db`
-  - [x] Add member: `crates/search`
-  - [x] Add member: `crates/notifications`
-  - [x] Add member: `crates/bin`
+  - [x] Add member: `crates/api` (renamed to `pebesen-api`)
+  - [x] Add member: `crates/core` (renamed to `pebesen-core`)
+  - [x] Add member: `crates/db` (renamed to `pebesen-db`)
+  - [x] Add member: `crates/search` (renamed to `pebesen-search`)
+  - [x] Add member: `crates/notifications` (renamed to `pebesen-notifications`)
+  - [x] Add member: `crates/bin` (renamed to `pebesen-bin`)
 - [x] Create each crate with `cargo new --lib` (except `bin`)
 - [x] Add shared workspace dependencies in root `Cargo.toml` (`[workspace.dependencies]`)
   - [x] `tokio` with full features
@@ -121,85 +121,85 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.1.1 Database Migrations
 
-- [ ] Write migration `0002_users.sql`
-  - [ ] `users` table: `id UUID`, `username TEXT UNIQUE`, `display_name TEXT`, `email TEXT UNIQUE`, `password_hash TEXT`, `created_at TIMESTAMPTZ`, `settings JSONB DEFAULT '{}'`
-  - [ ] Index: `CREATE UNIQUE INDEX idx_users_email ON users(lower(email))`
-  - [ ] Index: `CREATE UNIQUE INDEX idx_users_username ON users(lower(username))`
-- [ ] Write migration `0003_spaces.sql`
-  - [ ] `spaces` table: `id UUID`, `slug TEXT UNIQUE`, `name TEXT`, `description TEXT`, `visibility TEXT CHECK(...)`, `created_at TIMESTAMPTZ`
-  - [ ] Index: `CREATE UNIQUE INDEX idx_spaces_slug ON spaces(lower(slug))`
-- [ ] Write migration `0004_memberships.sql`
-  - [ ] `memberships` table: `user_id UUID REFERENCES users`, `space_id UUID REFERENCES spaces`, `role TEXT CHECK(...)`, `joined_at TIMESTAMPTZ`, `PRIMARY KEY (user_id, space_id)`
-  - [ ] Index: `CREATE INDEX idx_memberships_space ON memberships(space_id)`
+- [x] Write migration `0002_users.sql`
+  - [x] `users` table: `id UUID`, `username TEXT UNIQUE`, `display_name TEXT`, `email TEXT UNIQUE`, `password_hash TEXT`, `created_at TIMESTAMPTZ`, `settings JSONB DEFAULT '{}'`
+  - [x] Index: `CREATE UNIQUE INDEX idx_users_email ON users(lower(email))`
+  - [x] Index: `CREATE UNIQUE INDEX idx_users_username ON users(lower(username))`
+- [x] Write migration `0003_spaces.sql`
+  - [x] `spaces` table: `id UUID`, `slug TEXT UNIQUE`, `name TEXT`, `description TEXT`, `visibility TEXT CHECK(...)`, `created_at TIMESTAMPTZ`
+  - [x] Index: `CREATE UNIQUE INDEX idx_spaces_slug ON spaces(lower(slug))`
+- [x] Write migration `0004_memberships.sql`
+  - [x] `memberships` table: `user_id UUID REFERENCES users`, `space_id UUID REFERENCES spaces`, `role TEXT CHECK(...)`, `joined_at TIMESTAMPTZ`, `PRIMARY KEY (user_id, space_id)`
+  - [x] Index: `CREATE INDEX idx_memberships_space ON memberships(space_id)`
 
-#### 0.1.2 Core Domain Types (`crates/core`)
+#### 0.1.2 Core Domain Types (`crates/core` → `pebesen-core`)
 
-- [ ] Define `User` struct with `serde` derives
-- [ ] Define `Space` struct
-- [ ] Define `Membership` struct
-- [ ] Define `Role` enum: `Owner`, `Admin`, `Member`, `Guest`
-- [ ] Define `AuthClaims` struct for JWT payload
-- [ ] Define `AppError` enum implementing `axum::response::IntoResponse`
-  - [ ] Variants: `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `BadRequest`, `Internal`
+- [x] Define `User` struct with `serde` derives
+- [x] Define `Space` struct
+- [x] Define `Membership` struct
+- [x] Define `Role` enum: `Owner`, `Admin`, `Member`, `Guest`
+- [x] Define `AuthClaims` struct for JWT payload
+- [x] Define `AppError` enum implementing `axum::response::IntoResponse`
+  - [x] Variants: `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `BadRequest`, `Internal`
 
-#### 0.1.3 DB Queries (`crates/db`)
+#### 0.1.3 DB Queries (`crates/db` → `pebesen-db`)
 
-- [ ] `users::insert(pool, email, username, display_name, password_hash) -> User`
-- [ ] `users::find_by_email(pool, email) -> Option<User>`
-- [ ] `users::find_by_id(pool, id) -> Option<User>`
-- [ ] `users::find_by_username(pool, username) -> Option<User>`
-- [ ] `spaces::insert(pool, slug, name, visibility) -> Space`
-- [ ] `spaces::find_by_slug(pool, slug) -> Option<Space>`
-- [ ] `memberships::insert(pool, user_id, space_id, role) -> Membership`
-- [ ] `memberships::find(pool, user_id, space_id) -> Option<Membership>`
-- [ ] `memberships::list_by_space(pool, space_id) -> Vec<(User, Membership)>`
+- [x] `users::insert(pool, email, username, display_name, password_hash) -> User`
+- [x] `users::find_by_email(pool, email) -> Option<User>`
+- [x] `users::find_by_id(pool, id) -> Option<User>`
+- [x] `users::find_by_username(pool, username) -> Option<User>`
+- [x] `spaces::insert(pool, slug, name, visibility) -> Space`
+- [x] `spaces::find_by_slug(pool, slug) -> Option<Space>`
+- [x] `memberships::insert(pool, user_id, space_id, role) -> Membership`
+- [x] `memberships::find(pool, user_id, space_id) -> Option<Membership>`
+- [x] `memberships::list_by_space(pool, space_id) -> Vec<(User, Membership)>`
 
-#### 0.1.4 Auth Handlers (`crates/api`)
+#### 0.1.4 Auth Handlers (`crates/api` → `pebesen-api`)
 
-- [ ] `POST /auth/register`
-  - [ ] Validate email format (regex)
-  - [ ] Validate username: 3–32 chars, alphanumeric + underscore + hyphen
-  - [ ] Validate password: minimum 8 chars, at least one non-alpha char
-  - [ ] Check email uniqueness — return `409 Conflict` if taken
-  - [ ] Check username uniqueness — return `409 Conflict` if taken
-  - [ ] Hash password with Argon2id (memory: 64MB, iterations: 3, parallelism: 4)
-  - [ ] Insert user row
-  - [ ] Return `201` with `UserDTO` (no password hash)
-- [ ] `POST /auth/login`
-  - [ ] Look up user by email
-  - [ ] Verify password with Argon2id — constant-time comparison
-  - [ ] On failure: return `401` with generic message (no user enumeration)
-  - [ ] On success: generate access JWT (15 min, signed with `JWT_SECRET`)
-  - [ ] Generate refresh token (UUID v4, stored in Redis with TTL 30 days)
-  - [ ] Set refresh token as `httpOnly; Secure; SameSite=Strict` cookie
-  - [ ] Return `200` with access token in response body
-- [ ] `POST /auth/refresh`
-  - [ ] Read refresh token from cookie
-  - [ ] Look up token in Redis — return `401` if missing/expired
-  - [ ] Generate new access JWT
-  - [ ] Rotate refresh token (delete old, insert new) — prevent replay
-  - [ ] Return `200` with new access token
-- [ ] `POST /auth/logout`
-  - [ ] Read refresh token from cookie
-  - [ ] Delete from Redis
-  - [ ] Clear cookie (set Max-Age=0)
-  - [ ] Return `204`
+- [x] `POST /auth/register`
+  - [x] Validate email format (regex)
+  - [x] Validate username: 3–32 chars, alphanumeric + underscore + hyphen
+  - [x] Validate password: minimum 8 chars, at least one non-alpha char
+  - [x] Check email uniqueness — return `409 Conflict` if taken
+  - [x] Check username uniqueness — return `409 Conflict` if taken
+  - [x] Hash password with Argon2id (memory: 64MB, iterations: 3, parallelism: 4)
+  - [x] Insert user row
+  - [x] Return `201` with `UserDTO` (no password hash)
+- [x] `POST /auth/login`
+  - [x] Look up user by email
+  - [x] Verify password with Argon2id — constant-time comparison
+  - [x] On failure: return `401` with generic message (no user enumeration)
+  - [x] On success: generate access JWT (15 min, signed with `JWT_SECRET`)
+  - [x] Generate refresh token (UUID v4, stored in Redis with TTL 30 days)
+  - [x] Set refresh token as `httpOnly; Secure; SameSite=Strict` cookie
+  - [x] Return `200` with access token in response body
+- [x] `POST /auth/refresh`
+  - [x] Read refresh token from cookie
+  - [x] Look up token in Redis — return `401` if missing/expired
+  - [x] Generate new access JWT
+  - [x] Rotate refresh token (delete old, insert new) — prevent replay
+  - [x] Return `200` with new access token
+- [x] `POST /auth/logout`
+  - [x] Read refresh token from cookie
+  - [x] Delete from Redis
+  - [x] Clear cookie (set Max-Age=0)
+  - [x] Return `204`
 
 #### 0.1.5 Auth Middleware
 
-- [ ] Implement Axum `FromRequestParts` extractor `AuthUser`
-  - [ ] Extract `Authorization: Bearer <token>` header
-  - [ ] Decode and validate JWT signature + expiry
-  - [ ] Load user from DB (or short-lived cache)
-  - [ ] Return `AuthUser { id, username, email }` or `401`
-- [ ] Implement `OptionalAuthUser` extractor (returns `Option<AuthUser>`)
+- [x] Implement Axum `FromRequestParts` extractor `AuthUser`
+  - [x] Extract `Authorization: Bearer <token>` header
+  - [x] Decode and validate JWT signature + expiry
+  - [x] Load user from DB (or short-lived cache)
+  - [x] Return `AuthUser { id, username, email }` or `401`
+- [x] Implement `OptionalAuthUser` extractor (returns `Option<AuthUser>`)
 
 #### 0.1.6 Rate Limiting
 
-- [ ] Add `tower_governor` middleware
-- [ ] Apply to: `/auth/register`, `/auth/login`, `/auth/refresh`
-- [ ] Limit: 10 requests per minute per IP per endpoint
-- [ ] Return `429 Too Many Requests` with `Retry-After` header on breach
+- [x] Add `tower_governor` middleware
+- [x] Apply to: `/auth/register`, `/auth/login`, `/auth/refresh`
+- [x] Limit: 10 requests per minute per IP per endpoint
+- [x] Return `429 Too Many Requests` with `Retry-After` header on breach
 
 ---
 
@@ -207,34 +207,34 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.2.1 Handlers
 
-- [ ] `POST /spaces`
-  - [ ] Require auth
-  - [ ] Validate slug: 3–48 chars, lowercase alphanumeric + hyphen, no leading/trailing hyphen
-  - [ ] Validate name: 1–64 chars
-  - [ ] Check slug uniqueness — return `409` if taken
-  - [ ] Insert space row
-  - [ ] Insert membership row for creator with role `owner`
-  - [ ] Return `201` with `SpaceDTO`
-- [ ] `GET /spaces/:slug`
-  - [ ] Public spaces: no auth required
-  - [ ] Private spaces: require auth + membership
-  - [ ] Return `SpaceDTO` with member count
-  - [ ] Return `404` if not found, `403` if private and not member
-- [ ] `POST /spaces/:slug/join`
-  - [ ] Require auth
-  - [ ] Return `403` if space is private
-  - [ ] Return `409` if already a member
-  - [ ] Insert membership with role `member`
-  - [ ] Return `201` with `MembershipDTO`
-- [ ] `GET /spaces/:slug/members`
-  - [ ] Require auth + membership
-  - [ ] Return paginated list: `{ user: UserDTO, role, joined_at }`
-  - [ ] Page size: 50, cursor-based
+- [x] `POST /spaces`
+  - [x] Require auth
+  - [x] Validate slug: 3–48 chars, lowercase alphanumeric + hyphen, no leading/trailing hyphen
+  - [x] Validate name: 1–64 chars
+  - [x] Check slug uniqueness — return 409 if taken
+  - [x] Insert space row
+  - [x] Create membership with role=Owner for creator
+  - [x] Return `201` with SpaceDTO`
+- [x] `GET /spaces/:slug`
+  - [x] Public spaces: no auth required
+  - [x] Private spaces: require auth + membership
+  - [x] Return `SpaceDTO` with member count
+  - [x] Return `404` if not found, `403` if private and not member
+- [x] `POST /spaces/:slug/join`
+  - [x] Require auth
+  - [x] Return `403` if space is private
+  - [x] Return `409` if already a member
+  - [x] Insert membership with role `member`
+  - [x] Return `201` with `MembershipDTO`
+- [x] `GET /spaces/:slug/members`
+  - [x] Require auth + membership
+  - [x] Return paginated list: `{ user: UserDTO, role, joined_at }`
+  - [x] Page size: 50, cursor-based
 
 #### 0.2.2 DTOs
 
-- [ ] Define `SpaceDTO`: `id`, `slug`, `name`, `description`, `visibility`, `member_count`, `created_at`
-- [ ] Define `MembershipDTO`: `user_id`, `space_id`, `role`, `joined_at`
+- [x] Define `SpaceDTO`: `id`, `slug`, `name`, `description`, `visibility`, `member_count`, `created_at`
+- [x] Define `MembershipDTO`: `user_id`, `space_id`, `role`, `joined_at`
 
 ---
 
@@ -242,34 +242,34 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.3.1 Migration
 
-- [ ] Write migration `0005_streams.sql`
-  - [ ] `streams` table: `id UUID`, `space_id UUID REFERENCES spaces`, `name TEXT`, `description TEXT`, `visibility TEXT DEFAULT 'public'`, `created_at TIMESTAMPTZ`
-  - [ ] `UNIQUE (space_id, lower(name))`
-  - [ ] Index: `CREATE INDEX idx_streams_space ON streams(space_id)`
+- [x] Write migration `0005_streams.sql`
+  - [x] `streams` table: `id UUID`, `space_id UUID REFERENCES spaces`, `name TEXT`, `description TEXT`, `visibility TEXT DEFAULT 'public'`, `created_at TIMESTAMPTZ`
+  - [x] `UNIQUE (space_id, lower(name))`
+  - [x] Index: `CREATE INDEX idx_streams_space ON streams(space_id)`
 
 #### 0.3.2 DB Queries
 
-- [ ] `streams::insert(pool, space_id, name, description, visibility) -> Stream`
-- [ ] `streams::find_by_id(pool, id) -> Option<Stream>`
-- [ ] `streams::list_by_space(pool, space_id, user_id) -> Vec<Stream>`
-  - [ ] Filter: include public streams + private streams where user has membership
+- [x] `streams::insert(pool, space_id, name, description, visibility) -> Stream`
+- [x] `streams::find_by_id(pool, id) -> Option<Stream>`
+- [x] `streams::list_by_space(pool, space_id, user_id) -> Vec<Stream>`
+  - [x] Filter: include public streams + private streams where user has membership
 
 #### 0.3.3 Handlers
 
-- [ ] `POST /spaces/:slug/streams`
-  - [ ] Require auth + role `admin` or `owner`
-  - [ ] Validate name: 1–64 chars, no leading/trailing whitespace
-  - [ ] Check name uniqueness within space (case-insensitive)
-  - [ ] Return `201` with `StreamDTO`
-- [ ] `GET /spaces/:slug/streams`
-  - [ ] Public spaces: return public streams without auth
-  - [ ] Authenticated: return public streams + private streams user is member of
-  - [ ] Return ordered by `created_at ASC`
-- [ ] `PATCH /spaces/:slug/streams/:id`
-  - [ ] Require auth + role `admin` or `owner`
-  - [ ] Allow updating: `name`, `description`, `visibility`
-  - [ ] Re-validate name uniqueness if changed
-  - [ ] Return `200` with updated `StreamDTO`
+- [x] `POST /spaces/:slug/streams`
+  - [x] Require auth + role `admin` or `owner`
+  - [x] Validate name: 1–64 chars, no leading/trailing whitespace
+  - [x] Check name uniqueness within space (case-insensitive)
+  - [x] Return `201` with `StreamDTO`
+- [x] `GET /spaces/:slug/streams`
+  - [x] Public spaces: return public streams without auth
+  - [x] Authenticated: return public streams + private streams user is member of
+  - [x] Return ordered by `created_at ASC`
+- [x] `PATCH /spaces/:slug/streams/:id`
+  - [x] Require auth + role `admin` or `owner`
+  - [x] Allow updating: `name`, `description`, `visibility`
+  - [x] Re-validate name uniqueness if changed
+  - [x] Return `200` with updated `StreamDTO`
 
 ---
 
@@ -277,47 +277,47 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.4.1 Migration
 
-- [ ] Write migration `0006_topics.sql`
-  - [ ] `topics` table: `id UUID`, `stream_id UUID REFERENCES streams`, `name TEXT`, `status TEXT DEFAULT 'open' CHECK(...)`, `created_by UUID REFERENCES users`, `created_at TIMESTAMPTZ`, `last_active TIMESTAMPTZ`
-  - [ ] `UNIQUE (stream_id, lower(name))`
-  - [ ] Index: `CREATE INDEX idx_topics_stream_active ON topics(stream_id, last_active DESC)`
-  - [ ] Index: `CREATE INDEX idx_topics_stream_status ON topics(stream_id, status)`
+- [x] Write migration `0006_topics.sql`
+  - [x] `topics` table: `id UUID`, `stream_id UUID REFERENCES streams`, `name TEXT`, `status TEXT DEFAULT 'open' CHECK(...)`, `created_by UUID REFERENCES users`, `created_at TIMESTAMPTZ`, `last_active TIMESTAMPTZ`
+  - [x] `UNIQUE (stream_id, lower(name))`
+  - [x] Index: `CREATE INDEX idx_topics_stream_active ON topics(stream_id, last_active DESC)`
+  - [x] Index: `CREATE INDEX idx_topics_stream_status ON topics(stream_id, status)`
 
 #### 0.4.2 DB Queries
 
-- [ ] `topics::insert(pool, stream_id, name, created_by) -> Topic`
-- [ ] `topics::find_by_id(pool, id) -> Option<Topic>`
-- [ ] `topics::list_by_stream(pool, stream_id, status_filter) -> Vec<Topic>`
-- [ ] `topics::search_by_name_prefix(pool, stream_id, prefix) -> Vec<Topic>` (uses `pg_trgm`)
-- [ ] `topics::update_last_active(pool, topic_id, timestamp)`
-- [ ] `topics::set_status(pool, topic_id, status)`
-- [ ] `topics::rename(pool, topic_id, new_name)`
+- [x] `topics::insert(pool, stream_id, name, created_by) -> Topic`
+- [x] `topics::find_by_id(pool, id) -> Option<Topic>`
+- [x] `topics::list_by_stream(pool, stream_id, status_filter) -> Vec<Topic>`
+- [x] `topics::search_by_name_prefix(pool, stream_id, prefix) -> Vec<Topic>` (uses `pg_trgm`)
+- [x] `topics::update_last_active(pool, topic_id, timestamp)`
+- [x] `topics::set_status(pool, topic_id, status)`
+- [x] `topics::rename(pool, topic_id, new_name)`
 
 #### 0.4.3 Handlers
 
-- [ ] `POST /streams/:id/topics`
-  - [ ] Require auth + space membership
-  - [ ] Validate name: 1–128 chars
-  - [ ] Check name uniqueness within stream (case-insensitive)
-  - [ ] Set `last_active = NOW()`
-  - [ ] Return `201` with `TopicDTO`
-- [ ] `GET /streams/:id/topics`
-  - [ ] Public streams in public spaces: no auth required
-  - [ ] Accept `?status=open|resolved|archived|all` (default: `open`)
-  - [ ] Accept `?cursor=<last_active_timestamp>` for pagination
-  - [ ] Return ordered by `last_active DESC`, page size 50
-- [ ] `PATCH /topics/:id` (rename)
-  - [ ] Require auth + space membership (any member)
-  - [ ] Validate new name, check uniqueness
-  - [ ] Return `200` with updated `TopicDTO`
-- [ ] `PATCH /topics/:id/status`
-  - [ ] Require auth + space membership
-  - [ ] Validate value is `open`, `resolved`, or `archived`
-  - [ ] Return `200` with updated `TopicDTO`
-- [ ] `GET /streams/:id/topics?q=:prefix` (autocomplete)
-  - [ ] Return top 10 matching topics by name prefix
-  - [ ] Exclude `archived` from suggestions
-  - [ ] Response time target: < 50ms
+- [x] `POST /streams/:id/topics`
+  - [x] Require auth + space membership
+  - [x] Validate name: 1–128 chars
+  - [x] Check name uniqueness within stream (case-insensitive)
+  - [x] Set `last_active = NOW()`
+  - [x] Return `201` with `TopicDTO`
+- [x] `GET /streams/:id/topics`
+  - [x] Public streams in public spaces: no auth required
+  - [x] Accept `?status=open|resolved|archived|all` (default: `open`)
+  - [x] Accept `?cursor=<last_active_timestamp>` for pagination
+  - [x] Return ordered by `last_active DESC`, page size 50
+- [x] `PATCH /topics/:id` (rename)
+  - [x] Require auth + space membership (any member)
+  - [x] Validate new name, check uniqueness
+  - [x] Return `200` with updated `TopicDTO`
+- [x] `PATCH /topics/:id/status`
+  - [x] Require auth + space membership
+  - [x] Validate value is `open`, `resolved`, or `archived`
+  - [x] Return `200` with updated `TopicDTO`
+- [x] `GET /streams/:id/topics?q=:prefix` (autocomplete)
+  - [x] Return top 10 matching topics by name prefix
+  - [x] Exclude `archived` from suggestions
+  - [x] Response time target: < 50ms
 
 ---
 
@@ -325,66 +325,66 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.5.1 Migration
 
-- [ ] Write migration `0007_messages.sql`
-  - [ ] `messages` table: `id UUID`, `topic_id UUID REFERENCES topics NOT NULL`, `author_id UUID REFERENCES users NOT NULL`, `content TEXT NOT NULL`, `rendered TEXT`, `edited_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ`
-  - [ ] Index: `CREATE INDEX idx_messages_topic_time ON messages(topic_id, created_at)`
-  - [ ] Index: `CREATE INDEX idx_messages_author ON messages(author_id)`
-  - [ ] Constraint: `CHECK (length(content) > 0)`
+- [x] Write migration `0007_messages.sql`
+  - [x] `messages` table: `id UUID`, `topic_id UUID REFERENCES topics NOT NULL`, `author_id UUID REFERENCES users NOT NULL`, `content TEXT NOT NULL`, `rendered TEXT`, `edited_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ`
+  - [x] Index: `CREATE INDEX idx_messages_topic_time ON messages(topic_id, created_at)`
+  - [x] Index: `CREATE INDEX idx_messages_author ON messages(author_id)`
+  - [x] Constraint: `CHECK (length(content) > 0)`
 
 #### 0.5.2 Markdown Rendering
 
-- [ ] Add `pulldown-cmark` to `crates/core`
-- [ ] Implement `render_markdown(input: &str) -> String`
-  - [ ] Enable: tables, footnotes, strikethrough, task lists
-  - [ ] Sanitize output HTML — strip `<script>`, `<iframe>`, `on*` attributes
-  - [ ] Add `target="_blank" rel="noopener noreferrer"` to all external links
-  - [ ] Test: XSS vectors, nested markdown, code blocks with syntax hint
+- [x] Add `pulldown-cmark` to `pebesen-core`
+- [x] Implement `render_markdown(input: &str) -> String`
+  - [x] Enable: tables, footnotes, strikethrough, task lists
+  - [x] Sanitize output HTML — strip `<script>`, `<iframe>`, `on*` attributes
+  - [x] Add `target="_blank" rel="noopener noreferrer"` to all external links
+  - [x] Test: XSS vectors, nested markdown, code blocks with syntax hint
 
 #### 0.5.3 DB Queries
 
-- [ ] `messages::insert(pool, topic_id, author_id, content, rendered) -> Message`
-  - [ ] After insert: call `topics::update_last_active`
-- [ ] `messages::get_page(pool, topic_id, cursor, limit) -> Vec<Message>`
-  - [ ] Cursor: `created_at` timestamp, oldest-first
-  - [ ] Exclude soft-deleted
-  - [ ] Return `author: UserDTO` joined
-- [ ] `messages::find_by_id(pool, id) -> Option<Message>`
-- [ ] `messages::update_content(pool, id, author_id, new_content, new_rendered) -> Message`
-  - [ ] Enforce: only `author_id` may update
-  - [ ] Set `edited_at = NOW()`
-- [ ] `messages::soft_delete(pool, id, requester_id, requester_role)`
-  - [ ] Allow: author OR admin/owner
-  - [ ] Set `deleted_at = NOW()`, clear `content` and `rendered`
+- [x] `messages::insert(pool, topic_id, author_id, content, rendered) -> Message`
+  - [x] After insert: call `topics::update_last_active`
+- [x] `messages::get_page(pool, topic_id, cursor, limit) -> Vec<Message>`
+  - [x] Cursor: `created_at` timestamp, oldest-first
+  - [x] Exclude soft-deleted
+  - [x] Return `author: UserDTO` joined
+- [x] `messages::find_by_id(pool, id) -> Option<Message>`
+- [x] `messages::update_content(pool, id, author_id, new_content, new_rendered) -> Message`
+  - [x] Enforce: only `author_id` may update
+  - [x] Set `edited_at = NOW()`
+- [x] `messages::soft_delete(pool, id, requester_id, requester_role)`
+  - [x] Allow: author OR admin/owner
+  - [x] Set `deleted_at = NOW()`, clear `content` and `rendered`
 
 #### 0.5.4 Handlers
 
-- [ ] `POST /topics/:id/messages`
-  - [ ] Require auth + space membership
-  - [ ] Load topic — return `404` if not found
-  - [ ] Return `403` if topic status is `archived`
-  - [ ] Validate content: not empty, max 10,000 chars
-  - [ ] Render Markdown
-  - [ ] Insert message
-  - [ ] Enqueue for Meilisearch indexing (async, non-blocking)
-  - [ ] Publish to Redis pub/sub channel
-  - [ ] Return `201` with `MessageDTO`
-- [ ] `GET /topics/:id/messages`
-  - [ ] Public topics in public spaces: no auth required
-  - [ ] Accept `?cursor=<created_at>&limit=<n>` (max 100, default 50)
-  - [ ] Return `MessageDTO[]` with `author`, `edited_at`, `is_deleted` flag
-- [ ] `PATCH /messages/:id`
-  - [ ] Require auth — must be message author
-  - [ ] Validate new content
-  - [ ] Re-render Markdown
-  - [ ] Update Meilisearch index entry
-  - [ ] Publish `{type: "message_updated"}` to Redis
-  - [ ] Return `200` with updated `MessageDTO`
-- [ ] `DELETE /messages/:id`
-  - [ ] Require auth — author OR space admin/owner
-  - [ ] Soft delete only
-  - [ ] Remove from Meilisearch index
-  - [ ] Publish `{type: "message_deleted", id}` to Redis
-  - [ ] Return `204`
+- [x] `POST /topics/:id/messages`
+  - [x] Require auth + space membership
+  - [x] Load topic — return `404` if not found
+  - [x] Return `403` if topic status is `archived`
+  - [x] Validate content: not empty, max 10,000 chars
+  - [x] Render Markdown
+  - [x] Insert message
+  - [x] After insert: call `topics::update_last_active`
+  - [x] Return `201` with `MessageDTO`
+- [x] `GET /topics/:id/messages`
+  - [x] Require auth + space membership
+  - [x] Accept `?cursor=<timestamp>&limit=N` (default limit 50, max 100)
+  - [x] Cursor: `created_at` timestamp, oldest-first
+  - [x] Return `MessageWithAuthorDTO[]` with `author`, `edited_at`, `is_deleted` flag
+- [x] `PATCH /messages/:id`
+  - [x] Require auth — must be message author
+  - [x] Validate new content
+  - [x] Re-render Markdown
+  - [x] Update Meilisearch index entry
+  - [x] Publish `{type: "message_updated"}` to Redis
+  - [x] Return `200` with updated `MessageDTO`
+- [x] `DELETE /messages/:id`
+  - [x] Require auth — author OR space admin/owner
+  - [x] Soft delete only
+  - [x] Remove from Meilisearch index
+  - [x] Publish `{type: "message_deleted", id}` to Redis
+  - [x] Return `204`
 
 ---
 
@@ -392,30 +392,30 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.6.1 Connection Lifecycle
 
-- [ ] `GET /ws` — Axum WebSocket upgrade handler
-  - [ ] Require auth (JWT in `?token=` query param or `Authorization` header)
-  - [ ] On upgrade: create `ConnectionState { user_id, subscribed_spaces: HashSet }`
-  - [ ] Store connection in `Arc<DashMap<UserId, Vec<WsSender>>>`
-  - [ ] Spawn two tasks: `read_loop` and `write_loop`
-- [ ] `read_loop` — handle incoming client frames
-  - [ ] Parse JSON, match on `type`
-  - [ ] `subscribe`: add `space_ids`, subscribe to Redis channels
-  - [ ] `unsubscribe`: remove space, unsubscribe
-  - [ ] `catch_up`: accept `{ last_seen: { [topic_id]: message_id } }`, return missed messages
-  - [ ] `pong`: reset heartbeat timer
-  - [ ] Unknown type: log, ignore (do not close connection)
-- [ ] `write_loop` — push server events to client
-  - [ ] Receive from Redis pub/sub subscriber
-  - [ ] Receive from internal `tokio::mpsc` channel
-  - [ ] Serialize and send as `Text` frame
-  - [ ] On send error: log, break loop
-- [ ] On disconnect: remove from connection map, unsubscribe all Redis channels
+- [x] `GET /ws` — Axum WebSocket upgrade handler
+  - [x] Require auth (JWT in `?token=` query param or `Authorization` header)
+  - [x] On upgrade: create `ConnectionState { user_id, subscribed_spaces: HashSet }`
+  - [x] Store connection in `Arc<DashMap<UserId, Vec<WsSender>>>`
+  - [x] Spawn two tasks: `read_loop` and `write_loop`
+- [x] `read_loop` — handle incoming client frames
+  - [x] Parse JSON, match on `type`
+  - [x] `subscribe`: add `space_ids`, subscribe to Redis channels
+  - [x] `unsubscribe`: remove space, unsubscribe
+  - [x] `catch_up`: accept `{ last_seen: { [topic_id]: message_id } }`, return missed messages
+  - [x] `pong`: reset heartbeat timer
+  - [x] Unknown type: log, ignore (do not close connection)
+- [x] `write_loop` — push server events to client
+  - [x] Receive from Redis pub/sub subscriber
+  - [x] Receive from internal `tokio::mpsc` channel
+  - [x] Serialize and send as `Text` frame
+  - [x] On send error: log, break loop
+- [x] On disconnect: remove from connection map, unsubscribe all Redis channels
 
 #### 0.6.2 Redis Pub/Sub
 
-- [ ] Channel naming: `space:{space_id}`
-- [ ] Publish on: new message, message edit, message delete, topic created, topic updated, read position updated
-- [ ] Message envelope: `{ type, space_id, payload }`
+- [x] Channel naming: `space:{space_id}`
+- [x] Publish on: new message, message edit, message delete, topic created, topic updated, read position updated
+- [x] Message envelope: `{ type, space_id, payload }`
 
 #### 0.6.3 Heartbeat
 
@@ -500,7 +500,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.9.2 Async Indexer
 
-- [ ] Implement `crates/search::indexer`
+- [ ] Implement `pebesen-search::indexer`
   - [ ] Receive `IndexTask` via `tokio::mpsc` unbounded channel
   - [ ] Batch: collect up to 100 tasks or 500ms, whichever comes first
   - [ ] Send batch to Meilisearch
@@ -510,7 +510,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.9.3 Reindex Binary
 
-- [ ] `crates/bin/reindex.rs`
+- [ ] `crates/bin/reindex.rs` (in `pebesen-bin` crate)
   - [ ] Accept `--space <slug>` flag (optional)
   - [ ] Stream all non-deleted messages from PostgreSQL in batches of 500
   - [ ] Join with `topics`, `streams`, `users` for denormalized fields
@@ -536,7 +536,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] `GET /streams/:id/topics` — unauthenticated if stream is public in public space
 - [ ] `GET /topics/:id/messages` — unauthenticated if topic is in public stream in public space
 - [ ] `GET /spaces/:slug/search` — unauthenticated for public spaces
-- [ ] Access control decision tree documented in `crates/api/src/auth.rs` as inline comments
+- [ ] Access control decision tree documented in `crates/api/src/auth.rs` (now `pebesen-api`) as inline comments
 - [ ] Integration test: unauthenticated request to each public endpoint returns `200`
 - [ ] Integration test: unauthenticated request to private space returns `403`
 

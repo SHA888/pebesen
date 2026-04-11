@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -10,6 +8,8 @@ services:
       POSTGRES_PASSWORD: pebesen_dev_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - pebesen_net
     healthcheck:
@@ -51,23 +51,23 @@ services:
       timeout: 10s
       retries: 3
 
-  caddy:
-    image: caddy:alpine
-    container_name: pebesen_caddy
-    ports:
-      - "3000:3000"
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    networks:
-      - pebesen_net
-    depends_on:
-      - postgres
-      - redis
-      - meilisearch
+  # caddy:
+  #   image: caddy:alpine
+  #   container_name: pebesen_caddy
+  #   ports:
+  #     - "3000:3000"
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   networks:
+  #     - pebesen_net
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - meilisearch
 
   # Application service (commented out until Phase 0 build)
   # app:

@@ -1,16 +1,11 @@
 #![deny(clippy::all)]
 
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub mod auth;
+pub mod messages;
+pub mod middleware;
+pub mod redis_pubsub;
+pub mod search;
+pub mod spaces;
+pub mod streams;
+pub mod topics;
+pub mod websocket;
