@@ -40,6 +40,8 @@ setup:
 	rustup component add rustfmt clippy
 	@echo "Installing sqlx-cli..."
 	cargo install sqlx-cli --no-default-features --features native-tls,postgres || true
+	@echo "Installing cargo-audit..."
+	cargo install cargo-audit || true
 	@echo "Installing pre-commit..."
 	uv tool install pre-commit || pip install pre-commit || true
 	@echo "Installing pre-commit hooks..."
@@ -63,7 +65,7 @@ deps:
 check-security:
 	@echo "Running security audits..."
 	@echo "Auditing Rust dependencies..."
-	cargo audit || echo "cargo audit not found or failed"
+	cargo audit
 	@echo "Auditing frontend dependencies..."
 	cd frontend && pnpm audit --audit-level moderate
 

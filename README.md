@@ -186,6 +186,7 @@ Against the seven questions that matter for AI-era platforms:
 - Docker & Docker Compose
 - Python 3.8+ (for pre-commit hooks)
 - uv
+- `cargo-audit` — installed automatically by `make setup`, or manually: `cargo install cargo-audit`
 
 ### Setup
 

@@ -18,7 +18,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Shared workspace dependencies
 - [x] `rustfmt.toml`, `clippy.toml`
 - [x] `cargo build` succeeds on empty crates
-- [ ] `cargo install cargo-audit` — add to setup docs
+- [x] `cargo install cargo-audit` — add to setup docs
 
 ### P.2 Frontend ✅
 - [x] SvelteKit + TypeScript + ESLint + Prettier
