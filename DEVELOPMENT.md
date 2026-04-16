@@ -11,6 +11,7 @@ This guide covers the complete development workflow for Pebesen, from setup to d
 - [Testing](#testing)
 - [Database Management](#database-management)
 - [Code Quality](#code-quality)
+- [Observability and Health Metrics](#observability-and-health-metrics)
 - [Debugging](#debugging)
 - [Deployment](#deployment)
 
@@ -36,6 +37,7 @@ make dev
 - **Docker & Docker Compose**
 - **Python 3.8+** (for pre-commit hooks)
 - **uv** (recommended Python package manager)
+- **cargo-audit** — installed by `make setup`, or: `cargo install cargo-audit`
 
 ### Installation Commands
 
@@ -43,10 +45,6 @@ make dev
 # Rust
 rustup update stable
 rustup component add rustfmt clippy
-
-# Node.js & pnpm
-curl -fsSL https://core.nodejs.org/dist/v22.12.0/node-v22.12.0-linux-x64.tar.xz | tar -xz
-# Or use your system package manager
 
 # pnpm
 npm install -g pnpm
@@ -64,39 +62,43 @@ cp .env.example .env
 ```
 
 Required variables:
-- `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_URL` - Redis connection string
-- `MEILISEARCH_URL` - Search service URL
-- `MEILISEARCH_MASTER_KEY` - Search service master key
-- `JWT_SECRET` - JWT signing secret (min 64 chars)
+- `DATABASE_URL` — PostgreSQL connection string
+- `REDIS_URL` — Redis connection string
+- `MEILISEARCH_URL` — Search service URL
+- `MEILISEARCH_MASTER_KEY` — Search service master key
+- `JWT_SECRET` — JWT signing secret (min 64 chars)
+- `CONTRIBUTOR_PAYOUT_FRACTION` — default `0.20`
+- `INTELLIGENCE_API_ENABLED` — default `false`
 
 ## Project Structure
 
 ```
 pebesen/
-├── crates/                 # Rust workspace
-│   ├── api/               # HTTP API handlers
-│   ├── core/              # Domain models
-│   ├── db/                # Database queries
-│   ├── search/            # Search functionality
-│   ├── notifications/     # Notification system
-│   └── bin/               # Binary applications
-├── frontend/               # SvelteKit frontend
+├── crates/
+│   ├── pebesen-api/          # Axum handlers, middleware, WebSocket
+│   ├── pebesen-core/         # Domain types, business logic, no I/O
+│   ├── pebesen-db/           # sqlx queries, migrations
+│   ├── pebesen-search/       # Meilisearch + pgvector
+│   ├── pebesen-notifications/# Email, digest scheduler
+│   ├── pebesen-intelligence/ # B2B intelligence API (Phase 2 stub)
+│   └── pebesen-bin/          # CLI binaries: reindex, reembed, export, mcp
+├── frontend/
 │   ├── src/
-│   │   ├── lib/           # App utilities
-│   │   ├── routes/        # SvelteKit routes
-│   │   ├── stores/        # State management
-│   │   └── components/     # Reusable components
-│   ├── static/            # Static assets
-│   └── tests/             # Frontend tests
-├── migrations/             # Database migrations
-├── scripts/                # Helper scripts
-├── .github/workflows/     # CI/CD pipelines
-├── docker-compose.yml     # Development services
-├── Makefile               # Development commands
-├── Cargo.toml             # Rust workspace config
-├── pnpm-workspace.yaml    # pnpm workspace config
-└── .pre-commit-config.yaml # Pre-commit hooks
+│   │   ├── lib/
+│   │   ├── routes/
+│   │   ├── stores/
+│   │   └── components/
+│   └── static/
+├── migrations/
+├── docs/
+│   ├── self-hosting.md       # Phase 2
+│   ├── contributor-payouts.md# Phase 1 — legibility required before Phase 2
+│   ├── cold-start.md         # Internal — first 10 communities plan
+│   └── upgrade.md            # Phase 2
+├── docker-compose.yml
+├── Makefile
+├── Cargo.toml
+└── pnpm-workspace.yaml
 ```
 
 ## Development Workflow
@@ -104,86 +106,56 @@ pebesen/
 ### Daily Development
 
 ```bash
-# Start everything
-make dev
-
-# Backend only
-make dev-backend
-
-# Frontend only
-make dev-frontend
-
-# View logs
-make logs
+make dev           # Start everything
+make dev-backend   # Backend only
+make dev-frontend  # Frontend only
+make logs          # View logs
 ```
 
 ### Making Changes
 
-1. Create a feature branch:
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-
-2. Make your changes
-
-3. Run quality checks:
-   ```bash
-   make check
-   ```
-
-4. Commit changes (pre-commit hooks run automatically):
-   ```bash
-   git add .
-   git commit -m "feat: add your feature"
-   ```
-
-5. Push and create pull request
+1. Create feature branch: `git checkout -b feature/your-feature`
+2. Make changes
+3. Run quality checks: `make check`
+4. Commit — pre-commit hooks run automatically
+5. Push and open PR
 
 ### Database Changes
 
 ```bash
-# Create new migration
-echo "-- Your SQL here" > migrations/0002_new_table.sql
+# New migration
+echo "-- SQL here" > migrations/NNNN_description.sql
 
 # Run migrations
 make migrate
 
-# Reset database (development only)
+# Reset (dev only)
 make db-reset
 ```
 
 ## Testing
 
-### Running Tests
-
 ```bash
-# All tests
-make test
-
-# Rust tests only
-cargo test --all-features
-
-# Frontend tests only
-cd frontend && pnpm test
-
-# Watch mode
-cargo test --all-features --watch
+make test                        # All tests
+cargo test --all-features        # Rust only
+cd frontend && pnpm test         # Frontend only
+cargo test --all-features --watch# Watch mode
 ```
 
 ### Test Organization
 
-- **Unit Tests**: Test individual functions and modules
-- **Integration Tests**: Test API endpoints and database interactions
-- **Frontend Tests**: Component testing and user interactions
+- **Unit tests**: individual functions and modules
+- **Integration tests**: API endpoints and DB interactions
+- **Frontend tests**: component testing
 
 ### Coverage
 
 ```bash
-# Rust coverage (requires tarpaulin)
+# Rust
 cargo install tarpaulin
 cargo tarpaulin --all-features --workspace
 
-# Frontend coverage (requires vitest coverage plugin)
+# Frontend
 cd frontend && pnpm test --coverage
 ```
 
@@ -191,175 +163,168 @@ cd frontend && pnpm test --coverage
 
 ### Services
 
-- **PostgreSQL**: Primary database (port 5434 internally)
-- **Redis**: Cache and pub/sub (port 6380)
-- **Meilisearch**: Search engine (port 7701)
+- **PostgreSQL + pgvector**: port 5434 (internal)
+- **Redis**: port 6380
+- **Meilisearch**: port 7701
 
 ### Commands
 
 ```bash
-# Start database services
-make db-up
+make db-up        # Start services
+make db-down      # Stop services
+make db-reset     # Reset (WARNING: destroys data)
+make migrate      # Run migrations
+make refresh-stats# Refresh contributor_stats materialized view
 
-# Stop database services
-make db-down
-
-# Reset database (WARNING: destroys data)
-make db-reset
-
-# Run migrations
-make migrate
-
-# Connect to PostgreSQL
+# Direct access
 docker exec -it pebesen_postgres psql -U pebesen -d pebesen
-
-# Connect to Redis
 docker exec -it pebesen_redis redis-cli
-
-# Check Meilisearch
 curl http://localhost:7701/health
 ```
 
 ### Migration Guidelines
 
-1. Use descriptive names with numeric prefixes
-2. Write reversible migrations when possible
-3. Test migrations on fresh database
-4. Update corresponding model types
+1. Numbered prefix, descriptive name
+2. Write reversible migrations where possible
+3. Test on fresh database before committing
+4. Update corresponding domain types in `pebesen-core`
+5. Never rename or drop columns without a deprecation migration first
 
 ## Code Quality
 
 ### Pre-commit Hooks
 
-Automatic checks run before each commit:
 - Rust: `cargo fmt`, `cargo clippy`, `cargo check`
 - Frontend: `prettier`, `eslint`, `svelte-check`
 - General: trailing whitespace, file endings, large files
 
-### Manual Quality Checks
+### Manual Checks
 
 ```bash
-# Format all code
-make format
-
-# Run all linters
-make lint
-
-# Run security audits
-make check-security
-
-# Update dependencies
-make deps
+make format        # Format all code
+make lint          # Run all linters
+make check-security# cargo audit + pnpm audit
+make deps          # Update dependencies
 ```
 
-### Linting Rules
+### Code Review Gates (non-negotiable)
 
-- **Rust**: Deny all clippy warnings, enforce formatting
-- **TypeScript/Svelte**: ESLint recommended rules, Prettier formatting
-- **General**: No trailing whitespace, proper file endings
+The following are blocking PR rejections regardless of other quality:
+
+- Any gamification element in the UI (badges, XP, streaks, levels, leaderboards, progress bars)
+- Contribution weight recorded for gatekeeping moderation actions (close-as-duplicate without comment, remove without reason)
+- Access token stored in localStorage or any persistent browser storage
+- Cross-space data leakage in any search or intelligence endpoint
+- Payout computation that silently redistributes opted-out shares without space owner awareness
+
+---
+
+## Observability and Health Metrics
+
+### What to Measure
+
+Pebesen tracks community health, not platform vanity metrics. The distinction is architectural — the wrong metrics cause the wrong product decisions.
+
+**Primary health signals** (instrument from Phase 0):
+
+| Signal | Query anchor | Alert threshold |
+|---|---|---|
+| Engaged members (30d) | `contributions` WHERE created_at > now()-30d, distinct user_id per space | < 3 in any paid space |
+| Knowledge depth | topics with ≥1 reply + domain_id NOT NULL | Declining week-over-week |
+| Contributor retention (90d) | top-10 by weight in period T still active in T+90 | < 60% |
+| Space self-sufficiency | spaces WHERE subscription_revenue ≥ estimated_hosting_cost | Track, no alert yet |
+
+**Anti-metrics — never display on dashboards, never optimize for:**
+- Monthly active visitors (SEO traffic inflates this meaninglessly — Quora lesson)
+- Total registrations
+- Total message count
+- Raw DAU/MAU ratio without engagement qualifier
+
+### Instrumentation
+
+```bash
+# Rust — tracing
+RUST_LOG=info cargo run          # Production log level
+RUST_LOG=debug cargo run         # Debug with query logs
+RUST_LOG=sqlx=debug cargo run    # SQL query tracing
+```
+
+Add `tracing::instrument` on all contribution recording functions — these are the most business-critical code paths.
+
+### Health Check Endpoints
+
+```
+GET /health          # Liveness: returns 200 if process is alive
+GET /health/ready    # Readiness: checks DB + Redis + Meilisearch connectivity
+GET /health/metrics  # Prometheus-compatible metrics (Phase 1)
+```
+
+---
 
 ## Debugging
 
-### Backend Debugging
+### Backend
 
 ```bash
-# Enable debug logging
 RUST_LOG=debug cargo run
-
-# Database query logging
-RUST_LOG=sqlx=debug cargo run
-
-# Debug build
-cargo build
-
-# Run specific tests with debugging
+RUST_LOG=sqlx=debug cargo run    # SQL query logging
+cargo build                       # Debug build
 RUST_LOG=debug cargo test your_test
 ```
 
-### Frontend Debugging
+### Frontend
 
 ```bash
-# Development with debugging
 cd frontend && pnpm dev --debug
-
-# Type checking
-cd frontend && pnpm check
-
-# Build analysis
+cd frontend && pnpm check         # Type checking
 cd frontend && pnpm build --analyze
 ```
 
-### Database Debugging
+### Database
 
 ```bash
-# Check database status
 docker compose ps
-
-# View database logs
 docker compose logs postgres
-
-# Connect and explore
 docker exec -it pebesen_postgres psql -U pebesen -d pebesen
-\dt  # List tables
-\d  # Describe table
+# \dt   list tables
+# \d contributions   describe contributions table
 ```
 
 ## Performance
 
-### Backend Performance
-
 ```bash
-# Profile Rust code
+# Rust profiling
 cargo install cargo-flamegraph
 cargo flamegraph --bin pebesen
 
-# Benchmark database queries
-cargo install cargo-criterion
-cargo bench
-```
-
-### Frontend Performance
-
-```bash
-# Bundle analysis
+# Frontend bundle
 cd frontend && pnpm build --analyze
-
-# Lighthouse audit
 npx lighthouse http://localhost:5173
 ```
 
 ## Deployment
 
-### Development Deployment
+### Self-Hosted (AGPL — always free)
 
 ```bash
-# Build all components
-make build
-
-# Start with Docker Compose
+git clone https://github.com/SHA888/pebesen
+cd pebesen
+cp .env.example .env
+# Edit .env
 docker compose up -d
 ```
 
-### Production Considerations
+See `docs/self-hosting.md` for full documentation (Phase 2).
 
-- Use environment-specific configuration
-- Enable security headers and HTTPS
-- Set up proper logging and monitoring
-- Configure database backups
-- Use container orchestration (Kubernetes/Docker Swarm)
+### Hosted (Commercial)
 
-### Environment Configuration
+Same topology per tenant. Tenant isolation at space level. See ARCHITECTURE.md deployment topology section.
 
-Different environments require different `.env` files:
+### Target: First Space Self-Sufficiency
 
-```bash
-# Development
-cp .env.example .env.development
+The real Phase 0 gate is not a line count or a feature checklist. It is **the first space whose subscription revenue covers its hosting cost**. A community platform that reaches this at small scale is structurally more durable than one that requires growth to survive. Every deployment decision should be made with this constraint in mind — single binary, minimal RAM, fast cold start.
 
-# Production
-cp .env.example .env.production
-# Edit with production values
-```
+---
 
 ## Troubleshooting
 
@@ -367,61 +332,55 @@ cp .env.example .env.production
 
 **Port conflicts:**
 ```bash
-# Check what's using ports
 netstat -tulpn | grep :5173
 netstat -tulpn | grep :3000
-
-# Stop conflicting services
 make db-down
 ```
 
 **Database connection errors:**
 ```bash
-# Check database status
 make db-up
 docker compose ps
-
-# Reset database
 make db-reset
+```
+
+**pgvector extension missing:**
+```bash
+# Ensure using pgvector/pgvector:pg16 image, not postgres:16-alpine
+docker compose down -v
+docker compose up -d
+make migrate
 ```
 
 **Frontend build errors:**
 ```bash
-# Clear frontend cache
 cd frontend && rm -rf .svelte-kit build dist
 pnpm install
 ```
 
 **Rust compilation errors:**
 ```bash
-# Clear Rust cache
 cargo clean
 cargo update
 ```
 
-### Getting Help
-
-1. Check this guide first
-2. Run `make help` for available commands
-3. Check GitHub issues and discussions
-4. Review architecture documentation
-5. Ask in community channels
+---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for detailed contribution guidelines.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for full guidelines.
 
 ### Code Review Process
 
 1. All changes must pass `make check`
-2. Pull requests require at least one approval
-3. Tests must be added for new features
-4. Documentation must be updated for API changes
+2. PRs require at least one approval
+3. Tests required for new features
+4. Documentation updated for API changes
+5. Code review gates above enforced without exception
 
 ### Release Process
 
-1. Update version numbers
-2. Update CHANGELOG.md
-3. Create git tag
-4. Build and publish packages
-5. Update documentation
+1. Update version in `Cargo.toml` workspace + `package.json`
+2. Update `CHANGELOG.md`
+3. Create semver git tag
+4. CI publishes to GHCR on tag

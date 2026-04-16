@@ -587,9 +587,39 @@ Wire contribution recording into existing handlers:
 - [ ] PWA manifest + service worker (app shell + static asset cache)
 - [ ] Test: iOS Safari + Android Chrome install
 
+### 1.13 Moderation Quality Signal `[MUST]`
+
+> Prevents the Stack Overflow hostile gatekeeping trap.
+> Weight rewards moderation quantity by default. This task adds quality discrimination.
+
+- [ ] Define moderation action taxonomy in `pebesen-core`:
+  - [ ] `constructive`: ban spam, resolve conflict, approve member, document decision → generates weight
+  - [ ] `structural`: archive topic, merge duplicate, rename stream → generates weight
+  - [ ] `gatekeeping`: close as duplicate without comment, remove without reason → does NOT generate weight
+- [ ] Enforce taxonomy at application layer: `contributions::record(type=moderation)` requires `subtype` param
+- [ ] Add `moderation_subtype TEXT` column to `contributions` table (nullable, only for moderation type)
+- [ ] Migration `0018_moderation_subtype.sql`
+- [ ] Update contribution weight constants: constructive=3.0, structural=2.0, gatekeeping=0.0
+- [ ] Admin dashboard: moderation action breakdown per moderator — makes patterns visible without punishing
+
 ---
 
-## Phase 2 — Revenue Activation
+### 1.14 Payout Legibility Validation `[MUST]`
+
+> Quora's failure included opaque payouts contributors couldn't explain.
+> Before Phase 2 launch, the model must pass a human-readability test.
+
+- [ ] Write `docs/contributor-payouts.md` — plain language explanation
+  - [ ] What counts as a contribution (by type, in plain English)
+  - [ ] How weight is computed (table, no formulas in the intro)
+  - [ ] How payout is calculated (worked example with real numbers)
+  - [ ] How to opt out
+  - [ ] What happens to opted-out share
+- [ ] User test: show the doc to 3 non-technical moderators from Phase 0 communities
+  - [ ] Ask: "Can you estimate roughly what you'd earn if your space subscribed at $X/month?"
+  - [ ] Gate: all 3 can answer correctly without rereading — else revise doc and retest
+- [ ] Contribution breakdown tooltip in UI (0.13.11) must match doc language exactly
+- [ ] Legal review checkpoint: payout structure reviewed before any real money moves
 
 **Goal:** Activate all four revenue streams. Contributor payouts go live. B2B intelligence API launches. Verified expertise subscription tier opens.
 

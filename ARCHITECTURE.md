@@ -342,6 +342,10 @@ Weight is computed per contribution type. Initial defaults — calibrated agains
 | `summary` | 4.0 | Highest single-action value. Summaries compound for all future readers |
 | `reaction_net` | 0.5 | Daily aggregate. Net positive only. Floors at 0. |
 
+**Moderation quality constraint.** The `moderation` weight (3.0) is the highest per-action weight because moderation is the hardest unpaid labor. However, weight must not reward hostile gatekeeping. The following moderation actions do NOT generate contribution records: closing questions as duplicates, downvoting without comment, or removing content without documented reason. Only actions that improve community structure (banning spam, resolving conflicts, approving new members, documenting moderation decisions) generate weight. This distinction is enforced at the application layer, not the schema layer — the schema records what the application sends.
+
+**Why this revenue model works when Quora's failed.** Quora ran contributor revenue sharing tied to advertising revenue — an unstable pool determined by advertiser markets, not community value. Top earners made a few hundred dollars/month; most made less. The incentive pointed at impressions, not quality. Pebesen's payout pool is space subscription revenue — stable, directly proportional to the value the community provides to its members, and set by the space owner who has the clearest view of that value. The mechanism is identical in name and different in everything that matters.
+
 Payout for a contributor in a space for a period:
 
 ```
@@ -483,6 +487,24 @@ Public read: unauthenticated access to public spaces, streams, topics, messages,
 | Intelligence API P95 | < 1s | 2 |
 | Single-binary self-host RAM | < 512MB | 0 |
 | Docker Compose cold start | < 30s | 0 |
+
+---
+
+## Platform Health Metrics
+
+**Traffic is not community.** Quora has 400M MAU driven 82% by organic search. Revenue in 2023: $20M. The gap between those numbers is the cost of optimizing for reach instead of depth.
+
+Pebesen's primary health signals, in priority order:
+
+| Metric | Definition | Anti-metric (never optimize for this) |
+|---|---|---|
+| Engaged members | Users who posted, resolved a topic, or wrote a summary in last 30 days | Monthly active visitors |
+| Knowledge depth | Topics with ≥1 reply + domain tag + contributor weight > 0 | Total message count |
+| Contributor retention | % of top-10 contributors per space still active 90 days later | New registrations |
+| Space self-sufficiency | Spaces where hosting revenue ≥ hosting cost | Total spaces |
+| Payout legibility | % of contributors who can correctly explain their own weight | Total payout amount |
+
+The last metric is non-negotiable. If a moderator cannot explain in plain language why their contribution weight is what it is, the model has failed regardless of mathematical correctness. This must be validated in user testing before Phase 2 payout launch.
 
 ---
 
