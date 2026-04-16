@@ -1,7 +1,6 @@
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts, response::IntoResponse};
-use pebesen_core::{AppError, User};
+use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
+use pebesen_core::AppError;
 use sqlx::PgPool;
-use std::time::Duration;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]

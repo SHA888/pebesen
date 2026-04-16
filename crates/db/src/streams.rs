@@ -14,15 +14,15 @@ pub async fn update(
     let mut updates = Vec::new();
     let mut index = 1;
 
-    if let Some(n) = name {
+    if name.is_some() {
         updates.push(format!("name = ${}", index));
         index += 1;
     }
-    if let Some(d) = description {
+    if description.is_some() {
         updates.push(format!("description = ${}", index));
         index += 1;
     }
-    if let Some(_) = visibility {
+    if visibility.is_some() {
         updates.push(format!("visibility = ${}", index));
         index += 1;
     }
@@ -36,15 +36,12 @@ pub async fn update(
     query.push_str(&format!(" WHERE id = ${} RETURNING id, space_id, name, description, visibility as \"visibility: StreamVisibility\", created_at", index));
 
     let mut query_builder = sqlx::query_as::<_, Stream>(&query);
-    let mut current_index = 1;
 
     if let Some(n) = name {
         query_builder = query_builder.bind(n);
-        current_index += 1;
     }
     if let Some(d) = description {
         query_builder = query_builder.bind(d);
-        current_index += 1;
     }
     if let Some(v) = visibility {
         let visibility_str = match v {
@@ -52,7 +49,6 @@ pub async fn update(
             StreamVisibility::Private => "private",
         };
         query_builder = query_builder.bind(visibility_str);
-        current_index += 1;
     }
     query_builder = query_builder.bind(id);
 

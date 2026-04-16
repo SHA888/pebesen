@@ -154,12 +154,12 @@ pub async fn list_topics(
 
     // Apply cursor pagination
     let page_size = 50;
-    if let Some(cursor) = query.cursor {
-        if let Ok(timestamp) = cursor.parse::<i64>() {
-            let cursor_time = chrono::DateTime::from_timestamp(timestamp, 0)
-                .unwrap_or_else(|| chrono::Utc::now());
-            topics.retain(|t| t.last_active < cursor_time);
-        }
+    if let Some(cursor) = query.cursor
+        && let Ok(timestamp) = cursor.parse::<i64>()
+    {
+        let cursor_time =
+            chrono::DateTime::from_timestamp(timestamp, 0).unwrap_or_else(chrono::Utc::now);
+        topics.retain(|t| t.last_active < cursor_time);
     }
     topics.truncate(page_size);
 

@@ -200,28 +200,6 @@ impl axum::response::IntoResponse for AppError {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_role_from_str() {
-        assert_eq!(Role::from_str("owner").unwrap(), Role::Owner);
-        assert_eq!(Role::from_str("ADMIN").unwrap(), Role::Admin);
-        assert!(Role::from_str("invalid").is_err());
-    }
-
-    #[test]
-    fn test_visibility_from_str() {
-        assert_eq!(Visibility::from_str("public").unwrap(), Visibility::Public);
-        assert_eq!(
-            Visibility::from_str("PRIVATE").unwrap(),
-            Visibility::Private
-        );
-        assert!(Visibility::from_str("invalid").is_err());
-    }
-}
-
 /// Renders markdown input to sanitized HTML
 pub fn render_markdown(input: &str) -> String {
     use ammonia::{Builder, UrlRelative};
@@ -286,4 +264,27 @@ pub fn render_markdown(input: &str) -> String {
 
     // Add target="_blank" to external links
     sanitized.replace("<a href=", "<a target=\"_blank\" href=")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_role_from_str() {
+        assert_eq!(Role::from_str("owner").unwrap(), Role::Owner);
+        assert_eq!(Role::from_str("ADMIN").unwrap(), Role::Admin);
+        assert!(Role::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_visibility_from_str() {
+        assert_eq!(Visibility::from_str("public").unwrap(), Visibility::Public);
+        assert_eq!(
+            Visibility::from_str("PRIVATE").unwrap(),
+            Visibility::Private
+        );
+        assert!(Visibility::from_str("invalid").is_err());
+    }
 }

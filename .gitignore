@@ -149,3 +149,6 @@ temp/
 
 # Lock files (keep package-lock.json but ignore others if present)
 yarn.lock
+.skill/
+.cursor/rules/skill-context.md
+.windsurf/rules/skill-context.md

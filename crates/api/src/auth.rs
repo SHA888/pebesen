@@ -64,17 +64,19 @@ pub async fn register(
     }
 
     // Check email uniqueness
-    if let Some(_) = pebesen_db::users::find_by_email(&pool, &payload.email)
+    if pebesen_db::users::find_by_email(&pool, &payload.email)
         .await
         .map_err(|e| AppError::Internal(format!("Database error: {}", e)))?
+        .is_some()
     {
         return Err(AppError::Conflict);
     }
 
     // Check username uniqueness
-    if let Some(_) = pebesen_db::users::find_by_username(&pool, &payload.username)
+    if pebesen_db::users::find_by_username(&pool, &payload.username)
         .await
         .map_err(|e| AppError::Internal(format!("Database error: {}", e)))?
+        .is_some()
     {
         return Err(AppError::Conflict);
     }
@@ -170,7 +172,7 @@ pub async fn login(
         .map_err(|e| AppError::Internal(format!("Redis connection error: {}", e)))?;
     let key = format!("refresh_token:{}", refresh_token);
     redis_conn
-        .set_ex::<_, _, ()>(&key, user.id.to_string(), 2592000i64)
+        .set_ex::<_, _, ()>(&key, user.id.to_string(), 2592000u64)
         .await
         .map_err(|e| AppError::Internal(format!("Redis error: {}", e)))?;
 
@@ -266,7 +268,7 @@ pub async fn refresh(
     let new_refresh_token = Uuid::new_v4();
     let new_key = format!("refresh_token:{}", new_refresh_token);
     redis_conn
-        .set_ex::<_, _, ()>(&new_key, user_id.to_string(), 2592000i64)
+        .set_ex::<_, _, ()>(&new_key, user_id.to_string(), 2592000u64)
         .await
         .map_err(|e| AppError::Internal(format!("Redis error: {}", e)))?;
 

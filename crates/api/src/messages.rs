@@ -136,14 +136,10 @@ pub async fn get_messages(
         .ok_or(AppError::Forbidden)?;
 
     // Parse cursor and limit
-    let cursor = if let Some(ref c) = query.cursor {
-        Some(
-            chrono::DateTime::from_timestamp(c.parse::<i64>().unwrap_or(0), 0)
-                .unwrap_or_else(|| chrono::Utc::now()),
-        )
-    } else {
-        None
-    };
+    let cursor = query.cursor.as_ref().map(|c| {
+        chrono::DateTime::from_timestamp(c.parse::<i64>().unwrap_or(0), 0)
+            .unwrap_or_else(chrono::Utc::now)
+    });
     let limit = query.limit.unwrap_or(50).min(100);
 
     // Get messages page

@@ -1,11 +1,14 @@
 # Architecture
 
-## Guiding Constraint
+## Design Philosophy
 
-> Every architectural decision must be justifiable without AI.
-> Structure produces coherence. AI accelerates it. AI is never the foundation.
+Three principles that inform every architectural decision:
 
-If a feature only works because a model is doing the heavy lifting, it is not a structural feature — it is a demo.
+1. **Structure at input, not at retrieval.** Forcing topic discipline when a message is written eliminates the need to reconstruct context later. This is a fundamentally different tradeoff than post-hoc tagging, search, or AI summarization.
+
+2. **Value attribution must be continuous, not retroactive.** Contribution tracking accumulates from day one. Revenue distribution computed against historical contribution data requires that data to exist. You cannot backfill fairness.
+
+3. **The knowledge graph is the moat.** The structured relationship between spaces, streams, topics, messages, authors, expertise domains, and contribution weight is what makes Pebesen irreplaceable. Every schema decision either strengthens or weakens this graph.
 
 ---
 
@@ -14,347 +17,500 @@ If a feature only works because a model is doing the heavy lifting, it is not a 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Clients                              │
-│         Web (SvelteKit)    Mobile (future)    API           │
-└────────────────┬────────────────────────────────────────────┘
-                 │  HTTPS / WebSocket
-┌────────────────▼────────────────────────────────────────────┐
-│                     Gateway (Axum)                          │
-│   Auth Middleware   Rate Limiting   WebSocket Upgrade        │
-└────┬───────────────────┬───────────────────┬────────────────┘
-     │                   │                   │
-┌────▼─────┐    ┌────────▼──────┐   ┌────────▼────────┐
-│  REST    │    │  WS Handler   │   │  Search Proxy   │
-│  API     │    │  (fan-out)    │   │  (Meilisearch)  │
-└────┬─────┘    └────────┬──────┘   └─────────────────┘
-     │                   │
-┌────▼───────────────────▼────────────────────────────────────┐
-│                    Core Services                            │
-│   Identity   │   Stream/Topic   │   Notification   │  Auth  │
-└────┬─────────────────┬──────────────────┬───────────────────┘
-     │                 │                  │
-┌────▼──────┐   ┌──────▼──────┐   ┌───────▼──────┐
-│ PostgreSQL│   │    Redis    │   │ Meilisearch  │
-│ (primary) │   │ (pubsub,    │   │ (full-text   │
-│           │   │  sessions,  │   │  search)     │
-│           │   │  presence)  │   │              │
-└───────────┘   └─────────────┘   └──────────────┘
+│          SvelteKit SPA          Public SSR (SEO)            │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ HTTP + WebSocket
+┌──────────────────────▼──────────────────────────────────────┐
+│                    pebesen-api (Axum)                        │
+│   REST handlers · WS upgrade · Auth middleware · Rate limit │
+└──────┬───────────┬───────────┬──────────────┬───────────────┘
+       │           │           │              │
+┌──────▼──┐  ┌─────▼───┐  ┌───▼────┐  ┌──────▼──────┐
+│pebesen- │  │pebesen- │  │pebesen-│  │pebesen-     │
+│core     │  │db       │  │search  │  │notifications│
+│Domain   │  │sqlx     │  │Meili + │  │Email +      │
+│types,   │  │queries, │  │pgvector│  │digest jobs  │
+│business │  │migrations│  │        │  │             │
+│logic    │  │         │  │        │  │             │
+└─────────┘  └────┬────┘  └───┬────┘  └─────────────┘
+                  │            │
+       ┌──────────▼──┐  ┌──────▼──────────┐
+       │ PostgreSQL  │  │  Meilisearch    │
+       │ + pgvector  │  │  (full-text)    │
+       └─────────────┘  └─────────────────┘
+                  │
+       ┌──────────▼──┐
+       │    Redis    │
+       │ PubSub +    │
+       │ Session +   │
+       │ Cache       │
+       └─────────────┘
 ```
 
 ---
 
-## Core Data Model
+## Crate Structure
 
-This is the load-bearing structure of the entire product. Every feature is downstream of this.
-
-### Identity Layer
-
-```sql
--- One account per human. Not per community.
-users (
-  id          UUID PRIMARY KEY,
-  username    TEXT UNIQUE NOT NULL,       -- global handle
-  display_name TEXT NOT NULL,
-  email       TEXT UNIQUE NOT NULL,
-  created_at  TIMESTAMPTZ NOT NULL,
-  settings    JSONB NOT NULL DEFAULT '{}'  -- notification prefs, focus mode, etc.
-)
-
--- A community / organization / project
-spaces (
-  id          UUID PRIMARY KEY,
-  slug        TEXT UNIQUE NOT NULL,       -- appname.com/s/rust-lang
-  name        TEXT NOT NULL,
-  description TEXT,
-  visibility  TEXT NOT NULL              -- 'public' | 'private' | 'unlisted'
-    CHECK (visibility IN ('public', 'private', 'unlisted')),
-  created_at  TIMESTAMPTZ NOT NULL
-)
-
--- Many-to-many: user joins spaces
-memberships (
-  user_id     UUID REFERENCES users(id),
-  space_id    UUID REFERENCES spaces(id),
-  role        TEXT NOT NULL DEFAULT 'member'
-    CHECK (role IN ('owner', 'admin', 'member', 'guest')),
-  joined_at   TIMESTAMPTZ NOT NULL,
-  PRIMARY KEY (user_id, space_id)
-)
+```
+pebesen/
+├── crates/
+│   ├── pebesen-api/          # Axum handlers, middleware, WebSocket
+│   ├── pebesen-core/         # Domain types, business logic, no I/O
+│   ├── pebesen-db/           # sqlx queries, migrations
+│   ├── pebesen-search/       # Meilisearch client, indexer, vector ops
+│   ├── pebesen-notifications/# Email, digest scheduler
+│   ├── pebesen-intelligence/ # B2B intelligence API (Phase 2)
+│   └── pebesen-bin/          # CLI binaries: reindex, backfill, export
+├── frontend/                 # SvelteKit + TypeScript + TailwindCSS
+├── migrations/               # sqlx migrations, numbered, ordered
+└── docker-compose.yml
 ```
 
-**Key decision:** `users` is global. `memberships` is the join. Slack's fatal flaw was inverting this — workspace-scoped identities, loosely bound by email. One account here means one notification inbox, one search surface, one preference set.
+---
 
-### Message Architecture
+## Database Schema
+
+Schema is presented in migration order. Every table that will exist in Phase 3 is designed now, even if populated in later phases. No retroactive schema breaks.
+
+### Core Primitives (Phase 0)
 
 ```sql
--- Channels within a space
-streams (
-  id          UUID PRIMARY KEY,
-  space_id    UUID REFERENCES spaces(id) NOT NULL,
-  name        TEXT NOT NULL,
-  description TEXT,
-  visibility  TEXT NOT NULL DEFAULT 'public'
-    CHECK (visibility IN ('public', 'private')),
-  created_at  TIMESTAMPTZ NOT NULL,
-  UNIQUE (space_id, name)
-)
+-- 0001: Extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "vector";        -- pgvector: from day one
 
--- Topics within a stream — first-class entities, not metadata
-topics (
-  id          UUID PRIMARY KEY,
-  stream_id   UUID REFERENCES streams(id) NOT NULL,
-  name        TEXT NOT NULL,
-  status      TEXT NOT NULL DEFAULT 'open'
-    CHECK (status IN ('open', 'resolved', 'archived')),
-  created_by  UUID REFERENCES users(id),
-  created_at  TIMESTAMPTZ NOT NULL,
-  last_active TIMESTAMPTZ NOT NULL,
-  UNIQUE (stream_id, name)
-)
+-- 0002: Users
+CREATE TABLE users (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username        TEXT NOT NULL,
+    display_name    TEXT NOT NULL,
+    email           TEXT NOT NULL,
+    password_hash   TEXT NOT NULL,
+    settings        JSONB NOT NULL DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_users_email    ON users(lower(email));
+CREATE UNIQUE INDEX idx_users_username ON users(lower(username));
 
--- Messages belong to a topic. Always. No exceptions.
-messages (
-  id          UUID PRIMARY KEY,
-  topic_id    UUID REFERENCES topics(id) NOT NULL,
-  author_id   UUID REFERENCES users(id) NOT NULL,
-  content     TEXT NOT NULL,
-  rendered    TEXT,                      -- cached HTML render
-  edited_at   TIMESTAMPTZ,
-  deleted_at  TIMESTAMPTZ,              -- soft delete
-  created_at  TIMESTAMPTZ NOT NULL
-)
+-- 0003: Spaces
+CREATE TABLE spaces (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    slug        TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    description TEXT,
+    visibility  TEXT NOT NULL CHECK (visibility IN ('public', 'private')),
+    tier        TEXT NOT NULL DEFAULT 'community'
+                    CHECK (tier IN ('community', 'standard', 'scale')),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_spaces_slug ON spaces(lower(slug));
 
--- Index for fast topic-ordered retrieval
-CREATE INDEX idx_messages_topic_time ON messages(topic_id, created_at);
+-- 0004: Memberships
+CREATE TABLE memberships (
+    user_id     UUID NOT NULL REFERENCES users(id),
+    space_id    UUID NOT NULL REFERENCES spaces(id),
+    role        TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'guest')),
+    joined_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, space_id)
+);
+CREATE INDEX idx_memberships_space ON memberships(space_id);
+
+-- 0005: Streams
+CREATE TABLE streams (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    space_id    UUID NOT NULL REFERENCES spaces(id),
+    name        TEXT NOT NULL,
+    description TEXT,
+    visibility  TEXT NOT NULL DEFAULT 'public',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (space_id, lower(name))
+);
+CREATE INDEX idx_streams_space ON streams(space_id);
+
+-- 0006: Topics
+CREATE TABLE topics (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    stream_id   UUID NOT NULL REFERENCES streams(id),
+    name        TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'open'
+                    CHECK (status IN ('open', 'resolved', 'archived')),
+    summary     TEXT,
+    summary_rendered TEXT,
+    created_by  UUID NOT NULL REFERENCES users(id),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_active TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (stream_id, lower(name))
+);
 CREATE INDEX idx_topics_stream_active ON topics(stream_id, last_active DESC);
+CREATE INDEX idx_topics_stream_status ON topics(stream_id, status);
+
+-- 0007: Messages
+CREATE TABLE messages (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    topic_id    UUID NOT NULL REFERENCES topics(id),
+    author_id   UUID NOT NULL REFERENCES users(id),
+    content     TEXT NOT NULL CHECK (length(content) > 0),
+    rendered    TEXT,
+    embedding   vector(384),              -- populated async after insert
+    edited_at   TIMESTAMPTZ,
+    deleted_at  TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_messages_topic_time ON messages(topic_id, created_at);
+CREATE INDEX idx_messages_author     ON messages(author_id);
+CREATE INDEX idx_messages_embedding  ON messages
+    USING ivfflat (embedding vector_cosine_ops)  -- built after 1000+ rows
+    WITH (lists = 100);
 ```
 
-**Key decision:** Topics are rows, not tags. They have status, timestamps, and IDs. This is what enables topic-level unread tracking, status flags, expert routing, and search filtering — none of which are possible if topics are just a text field on messages.
-
-### Read State (Per-Topic, Not Per-Channel)
+### Contribution Primitive (Phase 0 — schema only, populated from day one)
 
 ```sql
--- Tracks last-read position per user per topic
--- Not per stream — that is the Slack model and it does not scale
-read_positions (
-  user_id     UUID REFERENCES users(id),
-  topic_id    UUID REFERENCES topics(id),
-  last_read_message_id UUID REFERENCES messages(id),
-  last_read_at TIMESTAMPTZ NOT NULL,
-  muted       BOOLEAN NOT NULL DEFAULT FALSE,
-  PRIMARY KEY (user_id, topic_id)
-)
+-- 0008: Expertise Domains
+-- Controlled vocabulary. Seeded at startup. Admin-extensible.
+CREATE TABLE expertise_domains (
+    id      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    slug    TEXT NOT NULL UNIQUE,
+    name    TEXT NOT NULL,
+    parent  UUID REFERENCES expertise_domains(id)   -- for domain hierarchies
+);
+
+-- 0009: Topic Domain Tags
+CREATE TABLE topic_domains (
+    topic_id    UUID NOT NULL REFERENCES topics(id),
+    domain_id   UUID NOT NULL REFERENCES expertise_domains(id),
+    tagged_by   UUID NOT NULL REFERENCES users(id),
+    tagged_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (topic_id, domain_id)
+);
+
+-- 0010: Contributions
+-- Every meaningful platform action is a contribution record.
+-- This is the primitive from which revenue attribution, expertise
+-- signals, and the B2B intelligence API are all derived.
+CREATE TABLE contributions (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES users(id),
+    space_id        UUID NOT NULL REFERENCES spaces(id),
+    domain_id       UUID REFERENCES expertise_domains(id),
+    type            TEXT NOT NULL CHECK (type IN (
+                        'message',          -- authored a message
+                        'topic_open',       -- opened a topic
+                        'topic_resolve',    -- marked a topic resolved
+                        'moderation',       -- moderation action taken
+                        'summary',          -- wrote a topic summary
+                        'reaction_net'      -- net positive reactions received (aggregated daily)
+                    )),
+    reference_id    UUID,                  -- nullable: message_id, topic_id, etc.
+    weight          NUMERIC(10,4) NOT NULL DEFAULT 1.0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_contributions_user_space  ON contributions(user_id, space_id);
+CREATE INDEX idx_contributions_space_time  ON contributions(space_id, created_at DESC);
+CREATE INDEX idx_contributions_domain      ON contributions(domain_id) WHERE domain_id IS NOT NULL;
+
+-- 0011: Contributor Stats (materialized, refreshed every 6h)
+-- Pre-aggregated for API performance. Source of truth is contributions table.
+CREATE MATERIALIZED VIEW contributor_stats AS
+SELECT
+    user_id,
+    space_id,
+    domain_id,
+    COUNT(*)                                        AS total_contributions,
+    SUM(weight)                                     AS total_weight,
+    MAX(created_at)                                 AS last_active,
+    COUNT(*) FILTER (WHERE type = 'message')        AS message_count,
+    COUNT(*) FILTER (WHERE type = 'moderation')     AS moderation_count
+FROM contributions
+GROUP BY user_id, space_id, domain_id;
+
+CREATE UNIQUE INDEX idx_contributor_stats_pk
+    ON contributor_stats(user_id, space_id, COALESCE(domain_id, uuid_nil()));
 ```
 
-**Key decision:** Read state at topic granularity means a user can mark "compilers stream" read while leaving "type system" stream unread. This is the concrete mechanism behind "read what you care about, skip the rest" — Zulip's most praised feature.
-
-### Notification System
+### Read State (Phase 0)
 
 ```sql
-notification_preferences (
-  user_id          UUID REFERENCES users(id),
-  scope_type       TEXT NOT NULL   -- 'global' | 'space' | 'stream' | 'topic'
-    CHECK (scope_type IN ('global', 'space', 'stream', 'topic')),
-  scope_id         UUID,           -- NULL for global
-  notify_on        TEXT[] NOT NULL -- ['mention', 'keyword', 'all', 'none']
-    DEFAULT '{mention}',
-  delivery_mode    TEXT NOT NULL   -- 'immediate' | 'digest' | 'muted'
-    DEFAULT 'immediate',
-  digest_schedule  TEXT,           -- cron expression for digest delivery
-  PRIMARY KEY (user_id, scope_type, COALESCE(scope_id, '00000000-0000-0000-0000-000000000000'))
-)
+-- 0012: Read Positions
+CREATE TABLE read_positions (
+    user_id             UUID NOT NULL REFERENCES users(id),
+    topic_id            UUID NOT NULL REFERENCES topics(id),
+    last_read_message_id UUID,
+    last_read_at        TIMESTAMPTZ,
+    muted               BOOLEAN NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (user_id, topic_id)
+);
+CREATE INDEX idx_read_positions_user ON read_positions(user_id);
 
-keyword_alerts (
-  id          UUID PRIMARY KEY,
-  user_id     UUID REFERENCES users(id) NOT NULL,
-  space_id    UUID REFERENCES spaces(id),  -- NULL = all spaces
-  keyword     TEXT NOT NULL,
-  created_at  TIMESTAMPTZ NOT NULL
-)
+-- 0013: Notifications
+CREATE TABLE notifications (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID NOT NULL REFERENCES users(id),
+    type        TEXT NOT NULL,
+    payload     JSONB NOT NULL,
+    read_at     TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_notifications_user_unread
+    ON notifications(user_id) WHERE read_at IS NULL;
+```
+
+### Identity Layer (Phase 1)
+
+```sql
+-- 0014: OAuth Identities
+CREATE TABLE oauth_identities (
+    user_id          UUID NOT NULL REFERENCES users(id),
+    provider         TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    UNIQUE (provider, provider_user_id)
+);
+
+-- 0015: Verified Credentials
+-- Self-sovereign: user submits proof, platform stores verification state.
+-- Admins do not award credentials. Verification is domain-scoped.
+CREATE TABLE verified_credentials (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES users(id),
+    domain_id       UUID NOT NULL REFERENCES expertise_domains(id),
+    verification_type TEXT NOT NULL CHECK (verification_type IN (
+                        'license_number',    -- e.g. medical license
+                        'institution_email', -- @university.edu pattern
+                        'orcid',             -- researcher ORCID
+                        'github_org',        -- member of org
+                        'manual_review'      -- human review queue
+                    )),
+    verification_data JSONB NOT NULL,        -- encrypted at app layer
+    status          TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending', 'verified', 'revoked')),
+    verified_at     TIMESTAMPTZ,
+    expires_at      TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_verified_credentials_user   ON verified_credentials(user_id);
+CREATE INDEX idx_verified_credentials_domain ON verified_credentials(domain_id)
+    WHERE status = 'verified';
+```
+
+### Revenue Layer (Phase 2)
+
+```sql
+-- 0016: Revenue Events
+-- Append-only ledger. Source of truth for revenue attribution.
+CREATE TABLE revenue_events (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    space_id    UUID NOT NULL REFERENCES spaces(id),
+    type        TEXT NOT NULL CHECK (type IN (
+                    'subscription',
+                    'intelligence_api',
+                    'verified_credential'
+                )),
+    amount_cents BIGINT NOT NULL,
+    period_start TIMESTAMPTZ NOT NULL,
+    period_end   TIMESTAMPTZ NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 0017: Contributor Payouts
+CREATE TABLE contributor_payouts (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES users(id),
+    space_id        UUID NOT NULL REFERENCES spaces(id),
+    period_start    TIMESTAMPTZ NOT NULL,
+    period_end      TIMESTAMPTZ NOT NULL,
+    contribution_weight NUMERIC(10,4) NOT NULL,
+    amount_cents    BIGINT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending', 'processing', 'paid', 'failed')),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
 ---
 
-## WebSocket Architecture
+## Contribution Weight Model
 
-Real-time fan-out without a message broker dependency in Phase 0.
+Weight is computed per contribution type. Initial defaults — calibrated against Phase 0 community data before Phase 2 payout launch:
+
+| Type | Base Weight | Notes |
+|---|---|---|
+| `message` | 1.0 | Floor. Adjusted by net reactions (Phase 2) |
+| `topic_open` | 2.0 | Creating structure has higher value than filling it |
+| `topic_resolve` | 1.5 | Closing the loop matters |
+| `moderation` | 3.0 | Highest weight. Moderation is the hardest unpaid labor |
+| `summary` | 4.0 | Highest single-action value. Summaries compound for all future readers |
+| `reaction_net` | 0.5 | Daily aggregate. Net positive only. Floors at 0. |
+
+Payout for a contributor in a space for a period:
 
 ```
-Client connects → WS upgrade → assigned to room(s) matching joined spaces/streams/topics
-
-Message posted (REST or WS) →
-  1. Write to PostgreSQL (durable)
-  2. Publish to Redis channel: space:{space_id}:stream:{stream_id}:topic:{topic_id}
-  3. Redis pub/sub fan-out to all connected clients subscribed to that topic
-  4. Update Meilisearch index (async, non-blocking)
-  5. Evaluate notification rules → queue push/email/digest
-
-Client reconnects after gap →
-  1. Sends last_seen_message_id
-  2. Server returns missed messages per topic since that ID
-  3. Client updates per-topic unread state
+payout = (contributor_weight / total_space_weight) × (space_revenue × payout_fraction)
 ```
 
-**Key decision:** Redis pub/sub handles fan-out. PostgreSQL is the source of truth. Meilisearch is a read-optimized replica for search. No single point of failure is the message store.
+`payout_fraction` is a space-level setting, defaulting to 0.20 (20% of space revenue). Space owners set this within platform-defined bounds (min 0.10, max 0.40).
+
+---
+
+## Real-Time Architecture
+
+WebSocket events flow through Redis pub/sub. Channel per space: `space:{space_id}`.
+
+```
+Client → WS upgrade → ConnectionState { user_id, subscribed_spaces }
+       → read_loop: subscribe | unsubscribe | catch_up | pong
+       → write_loop: Redis subscriber + internal mpsc
+
+Redis channels publish:
+  { type, space_id, payload }
+
+Event types:
+  message_created | message_updated | message_deleted
+  topic_created | topic_updated | topic_status_changed
+  read_position_updated | presence_heartbeat (opt-in only)
+  contribution_recorded (for real-time weight display — Phase 2)
+```
 
 ---
 
 ## Search Architecture
 
+Two complementary search surfaces:
+
+### Keyword Search (Meilisearch)
+
+Index: `messages`
+
 ```
-Meilisearch index: messages
-  - Searchable fields: content, topic.name, stream.name, author.display_name
-  - Filterable fields: space_id, stream_id, topic_id, author_id, created_at, topic.status
-  - Ranking: exact match → recency → topic activity
-
-Indexed on:
-  - Every new message (async, <500ms latency acceptable)
-  - Every topic name change
-  - Every message edit
-
-NOT indexed:
-  - Private stream messages for users without membership
-  - Deleted messages
+searchableAttributes:  [content, topic_name, stream_name, author_display_name]
+filterableAttributes:  [space_id, stream_id, topic_id, author_id, created_at,
+                        topic_status, domain_ids]
+sortableAttributes:    [created_at, contribution_weight]
 ```
 
-Search is scoped by membership at query time — Meilisearch receives a filter `space_id IN [spaces_user_is_member_of]` on every query. No leakage of private content.
+Async indexer in `pebesen-search`: batches up to 100 tasks or 500ms, 3-retry exponential backoff.
+
+### Semantic Search (pgvector)
+
+Embedding model: `all-MiniLM-L6-v2` (384 dimensions) via `fastembed-rs`.
+
+Embeddings are computed async after message insert. The IVFFlat index is created after 1,000 rows. Before that, exact search.
+
+Used for:
+- "Similar topics" across communities (Phase 2 public directory)
+- B2B intelligence clustering (Phase 2)
+- Cross-space expert discovery (Phase 2)
+
+---
+
+## Intelligence API Architecture (Phase 2)
+
+The `pebesen-intelligence` crate exposes a separate API surface, rate-limited and key-authenticated, distinct from the user-facing API.
+
+```
+GET  /v1/intelligence/spaces/:slug/domains
+     → top expertise domains by contributor weight, message density
+
+GET  /v1/intelligence/spaces/:slug/domains/:domain/signal
+     → weekly aggregated signal: message volume, contributor count,
+       sentiment proxy (net reaction ratio), topic open/resolve rate
+
+GET  /v1/intelligence/spaces/:slug/experts
+     → verified + high-weight contributors per domain
+       (respects contributor opt-out flag)
+
+GET  /v1/intelligence/spaces/:slug/topics/trending
+     → topics with accelerating last_active + message velocity
+```
+
+Privacy constraints enforced at query layer:
+- All counts anonymized below threshold of 5 contributors
+- Individual contributor data only returned if `intelligence_opt_in = true` in user settings
+- Space must explicitly enable intelligence API in settings
+- No raw message content in any intelligence endpoint
+
+---
+
+## Revenue Attribution Flow
+
+```
+Space subscription payment
+    → revenue_events INSERT (type=subscription, amount, period)
+    → attribution_job runs at period end
+        → reads contributor_stats for space + period
+        → computes payout per contributor (weight-proportional)
+        → writes contributor_payouts rows
+        → triggers payout processing (Stripe Connect or equivalent)
+```
+
+Contributor opt-out: setting `receive_payouts = false` routes their share back to the space owner. No silent redistribution.
 
 ---
 
 ## Authentication
 
-```
-Phase 0: Email + password (Argon2id hashing)
-         JWT access token (15 min) + refresh token (30 days, stored in httpOnly cookie)
-
-Phase 1: OAuth2 (GitHub, Google) — critical for open source community adoption
-         Magic link (email) — reduces friction for non-developer users
-
-Phase 2: SAML/SSO — required for enterprise self-hosting segment
-         Passkeys (WebAuthn) — future-proof, no password risk
-```
-
-**Key decision:** Session tokens are stored server-side in Redis with a reference in the httpOnly cookie. This allows instant revocation — important for the security-conscious self-hosting segment.
+- **Access token**: JWT, 15-minute TTL, signed with `JWT_SECRET`, in-memory only (never localStorage)
+- **Refresh token**: UUID v4, stored in Redis, 30-day TTL, rotated on use, `httpOnly; Secure; SameSite=Strict` cookie
+- **Bot tokens**: hashed API keys, scoped to space, rate-limited at 60 msg/min
+- **Intelligence API keys**: separate key namespace, space-scoped, usage-logged for billing
 
 ---
 
-## Notification Delivery
+## Access Control
+
+Three levels:
 
 ```
-Immediate:   WebSocket push (in-app, connected clients)
-             Push notification (mobile — Phase 2)
-Digest:      Email (SendGrid / Resend / self-hosted SMTP)
-             Scheduled job (cron, per user's digest_schedule)
-Batching:    Mentions in the same topic within 60s are collapsed into one notification
+Platform:  superadmin (internal only)
+Space:     owner | admin | member | guest
+Stream:    inherits space + optional stream-level private membership
 ```
+
+Topic access derives from stream access. No topic-level ACL in Phase 0 (added if demand is validated).
+
+Public read: unauthenticated access to public spaces, streams, topics, messages, and search. No write, no subscription to WS, no unread state.
 
 ---
 
-## Self-Hosting Architecture
+## Non-Functional Targets
 
-Target: single `docker compose up` deploys a fully functional instance.
-
-```yaml
-# docker-compose.yml (simplified)
-services:
-  app:        # Rust binary (API + WS)
-  frontend:   # SvelteKit static build served by Caddy
-  postgres:   # PostgreSQL 16
-  redis:      # Redis 7 (pubsub + session)
-  meilisearch: # Meilisearch latest
-  caddy:      # Reverse proxy + automatic TLS
-```
-
-Data volumes:
-- `postgres_data` — all messages, users, structure
-- `meilisearch_data` — search index (rebuilds from PG if lost)
-- `uploads` — file attachments
-
-Rebuild search index from PostgreSQL if Meilisearch data is lost: `cargo run --bin reindex`
+| Metric | Target | Phase |
+|---|---|---|
+| Message delivery P99 | < 100ms | 0 |
+| Topic autocomplete P99 | < 50ms | 0 |
+| Search response P95 | < 200ms | 0 |
+| Semantic search P95 | < 500ms | 2 |
+| Intelligence API P95 | < 1s | 2 |
+| Single-binary self-host RAM | < 512MB | 0 |
+| Docker Compose cold start | < 30s | 0 |
 
 ---
 
-## Frontend Architecture
+## Deployment Topology
 
+### Self-Hosted (AGPL)
 ```
-SvelteKit (TypeScript, pnpm)
-  src/
-    routes/
-      (auth)/          login, register, magic-link
-      (app)/
-        +layout.svelte  → global WS connection, unified inbox state
-        [space]/        space shell + stream list
-        [space]/[stream]/[topic]   message view + compose
-        inbox/          cross-community unified view (Phase 1)
-    lib/
-      stores/
-        connection.ts   WS state machine (connecting/connected/reconnecting)
-        spaces.ts       all joined spaces + membership
-        unread.ts       per-topic unread counts (the core UX state)
-        identity.ts     current user
-      components/
-        Compose.svelte       topic-enforcing message input
-        TopicList.svelte     stream sidebar with unread badges
-        MessageFeed.svelte   virtualized message list
-        CatchUpQueue.svelte  ordered unread topic queue (Phase 0)
-        ReadMode.svelte      distraction-reduced content view (Phase 1)
+docker compose up -d
+  pebesen-app    (Rust binary)
+  postgres       (16-alpine + pgvector extension)
+  redis          (7-alpine)
+  meilisearch    (latest)
+  caddy          (TLS termination)
 ```
 
-**Key decision:** `unread.ts` is a derived store computed from `read_positions` synced on WebSocket connect. Unread counts are never polled — they are pushed. UI never goes stale.
-
----
-
-## Explicit Non-Decisions (Deferred, Not Forgotten)
-
-These are architectural questions not answered in Phase 0. Deciding them early without data would add accidental complexity.
-
-| Question | Deferred Until |
-|---|---|
-| Federation (ActivityPub / Matrix bridge) | Phase 3 — needs user demand signal first |
-| E2E encryption for channel messages | Phase 2 — DMs only first |
-| Mobile native app (iOS / Android) | Phase 2 — validate web retention first |
-| Horizontal scaling / multi-region | Phase 3 — premature before load data exists |
-| AI summarization pipeline | Phase 2 — structure must work without it first |
-| Plugin / extension system | Phase 3 — API-first, then extension surface |
+### Hosted (Commercial)
+Same topology per tenant. No multi-tenant data mixing at DB layer. Tenant isolation at the space level with space-scoped API keys and row-level security where applicable.
 
 ---
 
 ## Security Baseline
 
-All of these are required before any public deployment, regardless of phase:
-
-- All inputs sanitized and validated at the Rust layer before reaching the DB
-- SQL queries via `sqlx` with compile-time checked queries — no string interpolation
-- Content Security Policy headers on all pages
-- Rate limiting on all auth endpoints (login, register, magic link)
-- CORS restricted to known origins
-- File uploads: type validation, size limits, stored outside web root
-- Dependency audit in CI: `cargo audit`, `pnpm audit`
-- Secrets in environment variables only — no hardcoded credentials, ever
-
----
-
-## File Structure
-
-```
-pebesen/
-├── crates/
-│   ├── api/            Axum HTTP + WebSocket handlers
-│   ├── core/           Domain types, business logic (no I/O)
-│   ├── db/             sqlx queries, migrations
-│   ├── search/         Meilisearch client wrapper
-│   ├── notifications/  Delivery pipeline (email, push, digest)
-│   └── bin/
-│       ├── server.rs   Main binary
-│       └── reindex.rs  Search reindex utility
-├── frontend/           SvelteKit app (pnpm)
-│   ├── src/
-│   ├── package.json
-│   └── svelte.config.js
-├── migrations/         PostgreSQL migrations (sqlx)
-├── docker-compose.yml
-├── .env.example
-├── Cargo.toml          Workspace root
-├── README.md
-├── ARCHITECTURE.md
-└── TODO.md
-```
+- Argon2id for password hashing (memory: 64MB, iterations: 3, parallelism: 4)
+- Constant-time password comparison
+- No user enumeration on login failure
+- Rate limiting on all auth endpoints (10 req/min/IP)
+- HTML sanitization on all Markdown output (strip script/iframe/on* attributes)
+- External links: `target="_blank" rel="noopener noreferrer"`
+- Verification data in `verified_credentials` encrypted at application layer before storage
+- Intelligence API: space-owner opt-in required, contributor opt-out respected
+- DMs: E2E encrypted (X25519 + XChaCha20-Poly1305), no plaintext stored, not indexed

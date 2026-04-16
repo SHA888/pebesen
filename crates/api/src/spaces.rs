@@ -71,9 +71,10 @@ pub async fn create_space(
     }
 
     // Check slug uniqueness — return 409 if taken
-    if let Some(_) = pebesen_db::spaces::find_by_slug(&pool, &payload.slug)
+    if pebesen_db::spaces::find_by_slug(&pool, &payload.slug)
         .await
         .map_err(|e| AppError::Internal(format!("Database error: {}", e)))?
+        .is_some()
     {
         return Err(AppError::Conflict);
     }
@@ -195,9 +196,10 @@ pub async fn join_space(
     }
 
     // Return 409 if already a member
-    if let Some(_) = pebesen_db::memberships::find(&pool, auth_user.id, space.id)
+    if pebesen_db::memberships::find(&pool, auth_user.id, space.id)
         .await
         .map_err(|e| AppError::Internal(format!("Database error: {}", e)))?
+        .is_some()
     {
         return Err(AppError::Conflict);
     }

@@ -1,5 +1,5 @@
 use crate::middleware::{AuthUser, OptionalAuthUser};
-use axum::{Json, extract::Path, extract::Query, extract::State, http::StatusCode};
+use axum::{Json, extract::Path, extract::State, http::StatusCode};
 use pebesen_core::{AppError, StreamVisibility};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -248,7 +248,7 @@ pub async fn update_stream(
         &pool,
         stream_id,
         new_name.as_deref(),
-        payload.description.as_deref().map(|d| Some(d)),
+        payload.description.as_deref().map(Some),
         new_visibility,
     )
     .await

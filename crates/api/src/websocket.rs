@@ -32,6 +32,12 @@ pub struct ConnectionManager {
     pub connections: Arc<DashMap<Uuid, HashSet<Uuid>>>,
 }
 
+impl Default for ConnectionManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConnectionManager {
     pub fn new() -> Self {
         Self {
@@ -42,7 +48,7 @@ impl ConnectionManager {
     pub fn subscribe_to_space(&self, user_id: Uuid, space_id: Uuid) {
         self.connections
             .entry(user_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(space_id);
     }
 

@@ -2,118 +2,66 @@
 
 Phases follow the demand validation sequence (Stage 0 → 5).
 Feature priority labels: `[MUST]` `[SHOULD]` `[NICE]`
-
 Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
+
+**Business model is locked. See README.md and ARCHITECTURE.md before modifying any schema task.**
 
 ---
 
 ## Pre-Phase: Repository and Tooling Bootstrap ✅
 
-> Gate: nothing else starts until this block is complete.
->
-> **Status: COMPLETED** - All tooling, workspace, and infrastructure setup is done.
+**Status: COMPLETED**
 
-### P.1 Rust Workspace
+### P.1 Rust Workspace ✅
+- [x] Root `Cargo.toml` with workspace members
+  - [x] `pebesen-api`, `pebesen-core`, `pebesen-db`, `pebesen-search`, `pebesen-notifications`, `pebesen-bin`
+- [x] Shared workspace dependencies
+- [x] `rustfmt.toml`, `clippy.toml`
+- [x] `cargo build` succeeds on empty crates
+- [ ] `cargo install cargo-audit` — add to setup docs
 
-- [x] Create root `Cargo.toml` with `[workspace]` and `members` list
-  - [x] Add member: `crates/api` (renamed to `pebesen-api`)
-  - [x] Add member: `crates/core` (renamed to `pebesen-core`)
-  - [x] Add member: `crates/db` (renamed to `pebesen-db`)
-  - [x] Add member: `crates/search` (renamed to `pebesen-search`)
-  - [x] Add member: `crates/notifications` (renamed to `pebesen-notifications`)
-  - [x] Add member: `crates/bin` (renamed to `pebesen-bin`)
-- [x] Create each crate with `cargo new --lib` (except `bin`)
-- [x] Add shared workspace dependencies in root `Cargo.toml` (`[workspace.dependencies]`)
-  - [x] `tokio` with full features
-  - [x] `axum` latest stable
-  - [x] `sqlx` with `postgres`, `uuid`, `time`, `runtime-tokio` features
-  - [x] `serde` + `serde_json`
-  - [x] `tracing` + `tracing-subscriber`
-  - [x] `uuid` with `v4`, `serde` features
-  - [x] `argon2`
-  - [x] `jsonwebtoken`
-  - [x] `redis` async
-- [x] Configure `rustfmt.toml` (edition 2024, max width 100)
-- [x] Configure `clippy.toml` — add `#![deny(clippy::all)]` to each crate root
-- [x] Confirm `cargo build` succeeds on empty crates
+### P.2 Frontend ✅
+- [x] SvelteKit + TypeScript + ESLint + Prettier
+- [x] pnpm workspace root
+- [x] `@sveltejs/adapter-node`, `tailwindcss`, `svelte-check`
+- [x] `pnpm dev` starts without errors
 
-### P.2 Frontend
+### P.3 Database Bootstrap ✅
+- [x] `docker-compose.yml` with postgres, redis, meilisearch, caddy, app (commented)
+- [x] `.env.example` with all variables
+- [x] Migration `0001_extensions.sql`: uuid-ossp, pg_trgm
+- [ ] **AMEND**: add `vector` extension to `0001_extensions.sql` — pgvector required from day one
+- [x] `sqlx migrate run` succeeds
 
-- [x] Scaffold SvelteKit app: `pnpm create svelte@latest frontend`
-  - [x] Select: TypeScript, ESLint, Prettier, no Playwright (add later)
-- [x] Configure `pnpm` workspace in root `pnpm-workspace.yaml`
-- [x] Install base dependencies
-  - [x] `@sveltejs/adapter-node` for server deployment
-  - [x] `tailwindcss` + `@tailwindcss/typography`
-  - [x] `svelte-check`
-- [x] Configure `eslint.config.js` with TypeScript rules
-- [x] Configure `prettier.config.js`
-- [x] Confirm `pnpm dev` starts without errors
+### P.4 CI Pipeline ✅
+- [x] `.github/workflows/ci.yml`: rust, frontend, docker jobs
+- [x] All CI jobs pass
 
-### P.3 Database Bootstrap
-
-- [x] Write `docker-compose.yml`
-  - [x] `postgres:16-alpine` service with named volume `postgres_data`
-  - [x] `redis:7-alpine` service with named volume `redis_data`
-  - [x] `getmeili/meilisearch:latest` service with named volume `meilisearch_data`
-  - [x] `caddy:alpine` service with bind-mounted `Caddyfile`
-  - [x] `app` service (commented out — added in Phase 0 build)
-  - [x] All services on shared `pebesen_net` bridge network
-  - [x] Health checks on postgres and redis
-- [x] Write `.env.example` with all variables and inline comments
-  - [x] `DATABASE_URL`
-  - [x] `REDIS_URL`
-  - [x] `MEILISEARCH_URL` + `MEILISEARCH_MASTER_KEY`
-  - [x] `JWT_SECRET` (min 64 chars)
-  - [x] `JWT_ACCESS_TTL_SECONDS` (default 900)
-  - [x] `JWT_REFRESH_TTL_SECONDS` (default 2592000)
-  - [x] `SERVER_HOST` + `SERVER_PORT`
-  - [x] `FRONTEND_URL` (for CORS)
-- [x] Write first migration `migrations/0001_extensions.sql`
-  - [x] `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`
-  - [x] `CREATE EXTENSION IF NOT EXISTS "pg_trgm"`
-- [x] Confirm `sqlx migrate run` succeeds against fresh DB
-
-### P.4 CI Pipeline
-
-- [x] Create `.github/workflows/ci.yml`
-  - [x] Trigger: push to `main`, all PRs
-  - [x] Job: `rust`
-    - [x] `cargo fmt --check`
-    - [x] `cargo clippy -- -D warnings`
-    - [x] `cargo test --all`
-    - [x] `cargo audit`
-    - [x] Cache: `~/.cargo/registry`, `target/`
-  - [x] Job: `frontend`
-    - [x] `pnpm install --frozen-lockfile`
-    - [x] `pnpm lint`
-    - [x] `pnpm check`
-    - [x] `pnpm test`
-    - [x] `pnpm audit`
-  - [x] Job: `docker`
-    - [x] `docker compose config`
-    - [x] `docker compose up -d --wait`
-    - [x] `docker compose down`
-- [x] Confirm all CI jobs pass on an empty commit
-
-### P.5 Developer Experience
-
-- [x] Write root `Makefile`
-  - [x] `make dev` — starts docker compose + cargo watch + pnpm dev
-  - [x] `make migrate` — runs sqlx migrations
-  - [x] `make test` — runs cargo test + pnpm test
-  - [x] `make lint` — runs clippy + eslint
-  - [x] `make reindex` — runs reindex binary
-- [x] Write `CONTRIBUTING.md` — setup steps, branch naming, PR checklist
-- [x] Write `.gitignore` — covers Rust, Node, env files, IDE dirs
+### P.5 Developer Experience ✅
+- [x] Root `Makefile` with dev, migrate, test, lint, reindex targets
+- [x] `CONTRIBUTING.md`, `.gitignore`
 
 ---
 
 ## Phase 0 — MVP: Core Architecture Validation
 
-**Goal:** A working instance where a single community can post and read messages in topic-organized streams with full-history search and no presence indicators.
+**Goal:** A working instance where a single community can post and read messages in topic-organized streams, with full-history search, contribution tracking accumulating from day one, and no presence indicators.
 
-**Gate to Phase 1:** 3–5 real communities actively using daily for 30 consecutive days. At least one community migrated from an existing platform.
+**Gate to Phase 1:** 3–5 real communities actively using daily for 30 consecutive days. At least one community migrated from an existing platform. Contribution data accumulating cleanly.
+
+---
+
+### 0.0 Schema Foundation Amendments `[MUST]`
+
+> These must complete before any other Phase 0 migration is written.
+> The full schema is defined in ARCHITECTURE.md. Migrations implement it.
+
+- [ ] Amend `0001_extensions.sql`: add `CREATE EXTENSION IF NOT EXISTS "vector"`
+- [ ] Confirm `pgvector` available in postgres service in `docker-compose.yml`
+  - [ ] Use `pgvector/pgvector:pg16` image instead of `postgres:16-alpine`
+- [ ] Add `pebesen-intelligence` crate stub to workspace (empty, Phase 2 implementation)
+- [ ] Add `CONTRIBUTOR_PAYOUT_FRACTION` (default `0.20`) to `.env.example`
+- [ ] Add `INTELLIGENCE_API_ENABLED` (default `false`) to `.env.example`
 
 ---
 
@@ -121,203 +69,71 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.1.1 Database Migrations
 
-- [x] Write migration `0002_users.sql`
-  - [x] `users` table: `id UUID`, `username TEXT UNIQUE`, `display_name TEXT`, `email TEXT UNIQUE`, `password_hash TEXT`, `created_at TIMESTAMPTZ`, `settings JSONB DEFAULT '{}'`
-  - [x] Index: `CREATE UNIQUE INDEX idx_users_email ON users(lower(email))`
-  - [x] Index: `CREATE UNIQUE INDEX idx_users_username ON users(lower(username))`
-- [x] Write migration `0003_spaces.sql`
-  - [x] `spaces` table: `id UUID`, `slug TEXT UNIQUE`, `name TEXT`, `description TEXT`, `visibility TEXT CHECK(...)`, `created_at TIMESTAMPTZ`
-  - [x] Index: `CREATE UNIQUE INDEX idx_spaces_slug ON spaces(lower(slug))`
-- [x] Write migration `0004_memberships.sql`
-  - [x] `memberships` table: `user_id UUID REFERENCES users`, `space_id UUID REFERENCES spaces`, `role TEXT CHECK(...)`, `joined_at TIMESTAMPTZ`, `PRIMARY KEY (user_id, space_id)`
-  - [x] Index: `CREATE INDEX idx_memberships_space ON memberships(space_id)`
+- [x] Migration `0002_users.sql` — `users` table with settings JSONB
+- [x] Migration `0003_spaces.sql` — add `tier TEXT DEFAULT 'community'` column
+- [x] Migration `0004_memberships.sql`
 
-#### 0.1.2 Core Domain Types (`crates/core` → `pebesen-core`)
+#### 0.1.2 Core Domain Types (`pebesen-core`)
 
-- [x] Define `User` struct with `serde` derives
-- [x] Define `Space` struct
-- [x] Define `Membership` struct
-- [x] Define `Role` enum: `Owner`, `Admin`, `Member`, `Guest`
-- [x] Define `AuthClaims` struct for JWT payload
-- [x] Define `AppError` enum implementing `axum::response::IntoResponse`
-  - [x] Variants: `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `BadRequest`, `Internal`
+- [x] `User`, `Space`, `Membership`, `Role` structs
+- [x] `AuthClaims` JWT payload struct
+- [x] `AppError` enum implementing `IntoResponse`
+- [ ] Add `SpaceTier` enum: `Community`, `Standard`, `Scale`
+- [ ] Add `ContributionType` enum matching ARCHITECTURE.md
 
-#### 0.1.3 DB Queries (`crates/db` → `pebesen-db`)
+#### 0.1.3 DB Queries (`pebesen-db`)
 
-- [x] `users::insert(pool, email, username, display_name, password_hash) -> User`
-- [x] `users::find_by_email(pool, email) -> Option<User>`
-- [x] `users::find_by_id(pool, id) -> Option<User>`
-- [x] `users::find_by_username(pool, username) -> Option<User>`
-- [x] `spaces::insert(pool, slug, name, visibility) -> Space`
-- [x] `spaces::find_by_slug(pool, slug) -> Option<Space>`
-- [x] `memberships::insert(pool, user_id, space_id, role) -> Membership`
-- [x] `memberships::find(pool, user_id, space_id) -> Option<Membership>`
-- [x] `memberships::list_by_space(pool, space_id) -> Vec<(User, Membership)>`
+- [x] `users::insert`, `find_by_email`, `find_by_id`, `find_by_username`
+- [x] `spaces::insert`, `find_by_slug`
+- [x] `memberships::insert`, `find`, `list_by_space`
 
-#### 0.1.4 Auth Handlers (`crates/api` → `pebesen-api`)
+#### 0.1.4 Auth Handlers (`pebesen-api`)
 
-- [x] `POST /auth/register`
-  - [x] Validate email format (regex)
-  - [x] Validate username: 3–32 chars, alphanumeric + underscore + hyphen
-  - [x] Validate password: minimum 8 chars, at least one non-alpha char
-  - [x] Check email uniqueness — return `409 Conflict` if taken
-  - [x] Check username uniqueness — return `409 Conflict` if taken
-  - [x] Hash password with Argon2id (memory: 64MB, iterations: 3, parallelism: 4)
-  - [x] Insert user row
-  - [x] Return `201` with `UserDTO` (no password hash)
-- [x] `POST /auth/login`
-  - [x] Look up user by email
-  - [x] Verify password with Argon2id — constant-time comparison
-  - [x] On failure: return `401` with generic message (no user enumeration)
-  - [x] On success: generate access JWT (15 min, signed with `JWT_SECRET`)
-  - [x] Generate refresh token (UUID v4, stored in Redis with TTL 30 days)
-  - [x] Set refresh token as `httpOnly; Secure; SameSite=Strict` cookie
-  - [x] Return `200` with access token in response body
-- [x] `POST /auth/refresh`
-  - [x] Read refresh token from cookie
-  - [x] Look up token in Redis — return `401` if missing/expired
-  - [x] Generate new access JWT
-  - [x] Rotate refresh token (delete old, insert new) — prevent replay
-  - [x] Return `200` with new access token
-- [x] `POST /auth/logout`
-  - [x] Read refresh token from cookie
-  - [x] Delete from Redis
-  - [x] Clear cookie (set Max-Age=0)
-  - [x] Return `204`
+- [x] `POST /auth/register` — validate, hash Argon2id, insert, return 201
+- [x] `POST /auth/login` — verify, issue JWT + refresh token
+- [x] `POST /auth/refresh` — rotate refresh token
+- [x] `POST /auth/logout` — delete refresh token, clear cookie
 
 #### 0.1.5 Auth Middleware
 
-- [x] Implement Axum `FromRequestParts` extractor `AuthUser`
-  - [x] Extract `Authorization: Bearer <token>` header
-  - [x] Decode and validate JWT signature + expiry
-  - [x] Load user from DB (or short-lived cache)
-  - [x] Return `AuthUser { id, username, email }` or `401`
-- [x] Implement `OptionalAuthUser` extractor (returns `Option<AuthUser>`)
+- [x] `AuthUser` extractor (FromRequestParts)
+- [x] `OptionalAuthUser` extractor
 
 #### 0.1.6 Rate Limiting
 
-- [x] Add `tower_governor` middleware
-- [x] Apply to: `/auth/register`, `/auth/login`, `/auth/refresh`
-- [x] Limit: 10 requests per minute per IP per endpoint
-- [x] Return `429 Too Many Requests` with `Retry-After` header on breach
+- [x] `tower_governor` on auth endpoints — 10 req/min/IP
 
 ---
 
 ### 0.2 Spaces `[MUST]`
 
-#### 0.2.1 Handlers
-
-- [x] `POST /spaces`
-  - [x] Require auth
-  - [x] Validate slug: 3–48 chars, lowercase alphanumeric + hyphen, no leading/trailing hyphen
-  - [x] Validate name: 1–64 chars
-  - [x] Check slug uniqueness — return 409 if taken
-  - [x] Insert space row
-  - [x] Create membership with role=Owner for creator
-  - [x] Return `201` with SpaceDTO`
-- [x] `GET /spaces/:slug`
-  - [x] Public spaces: no auth required
-  - [x] Private spaces: require auth + membership
-  - [x] Return `SpaceDTO` with member count
-  - [x] Return `404` if not found, `403` if private and not member
-- [x] `POST /spaces/:slug/join`
-  - [x] Require auth
-  - [x] Return `403` if space is private
-  - [x] Return `409` if already a member
-  - [x] Insert membership with role `member`
-  - [x] Return `201` with `MembershipDTO`
-- [x] `GET /spaces/:slug/members`
-  - [x] Require auth + membership
-  - [x] Return paginated list: `{ user: UserDTO, role, joined_at }`
-  - [x] Page size: 50, cursor-based
-
-#### 0.2.2 DTOs
-
-- [x] Define `SpaceDTO`: `id`, `slug`, `name`, `description`, `visibility`, `member_count`, `created_at`
-- [x] Define `MembershipDTO`: `user_id`, `space_id`, `role`, `joined_at`
+- [x] `POST /spaces` — create with slug + name, creator becomes Owner
+- [x] `GET /spaces/:slug` — public or member-auth
+- [x] `POST /spaces/:slug/join` — public spaces only
+- [x] `GET /spaces/:slug/members` — cursor paginated
+- [x] `SpaceDTO`, `MembershipDTO`
 
 ---
 
 ### 0.3 Streams `[MUST]`
 
-#### 0.3.1 Migration
-
-- [x] Write migration `0005_streams.sql`
-  - [x] `streams` table: `id UUID`, `space_id UUID REFERENCES spaces`, `name TEXT`, `description TEXT`, `visibility TEXT DEFAULT 'public'`, `created_at TIMESTAMPTZ`
-  - [x] `UNIQUE (space_id, lower(name))`
-  - [x] Index: `CREATE INDEX idx_streams_space ON streams(space_id)`
-
-#### 0.3.2 DB Queries
-
-- [x] `streams::insert(pool, space_id, name, description, visibility) -> Stream`
-- [x] `streams::find_by_id(pool, id) -> Option<Stream>`
-- [x] `streams::list_by_space(pool, space_id, user_id) -> Vec<Stream>`
-  - [x] Filter: include public streams + private streams where user has membership
-
-#### 0.3.3 Handlers
-
-- [x] `POST /spaces/:slug/streams`
-  - [x] Require auth + role `admin` or `owner`
-  - [x] Validate name: 1–64 chars, no leading/trailing whitespace
-  - [x] Check name uniqueness within space (case-insensitive)
-  - [x] Return `201` with `StreamDTO`
+- [x] Migration `0005_streams.sql`
+- [x] `streams::insert`, `find_by_id`, `list_by_space`
+- [x] `POST /spaces/:slug/streams` — admin/owner only
 - [x] `GET /spaces/:slug/streams`
-  - [x] Public spaces: return public streams without auth
-  - [x] Authenticated: return public streams + private streams user is member of
-  - [x] Return ordered by `created_at ASC`
 - [x] `PATCH /spaces/:slug/streams/:id`
-  - [x] Require auth + role `admin` or `owner`
-  - [x] Allow updating: `name`, `description`, `visibility`
-  - [x] Re-validate name uniqueness if changed
-  - [x] Return `200` with updated `StreamDTO`
 
 ---
 
-### 0.4 Topics — First-Class Entities `[MUST]`
+### 0.4 Topics `[MUST]`
 
-#### 0.4.1 Migration
-
-- [x] Write migration `0006_topics.sql`
-  - [x] `topics` table: `id UUID`, `stream_id UUID REFERENCES streams`, `name TEXT`, `status TEXT DEFAULT 'open' CHECK(...)`, `created_by UUID REFERENCES users`, `created_at TIMESTAMPTZ`, `last_active TIMESTAMPTZ`
-  - [x] `UNIQUE (stream_id, lower(name))`
-  - [x] Index: `CREATE INDEX idx_topics_stream_active ON topics(stream_id, last_active DESC)`
-  - [x] Index: `CREATE INDEX idx_topics_stream_status ON topics(stream_id, status)`
-
-#### 0.4.2 DB Queries
-
-- [x] `topics::insert(pool, stream_id, name, created_by) -> Topic`
-- [x] `topics::find_by_id(pool, id) -> Option<Topic>`
-- [x] `topics::list_by_stream(pool, stream_id, status_filter) -> Vec<Topic>`
-- [x] `topics::search_by_name_prefix(pool, stream_id, prefix) -> Vec<Topic>` (uses `pg_trgm`)
-- [x] `topics::update_last_active(pool, topic_id, timestamp)`
-- [x] `topics::set_status(pool, topic_id, status)`
-- [x] `topics::rename(pool, topic_id, new_name)`
-
-#### 0.4.3 Handlers
-
+- [x] Migration `0006_topics.sql` — includes `summary`, `summary_rendered` columns from day one
+- [x] `topics::insert`, `find_by_id`, `list_by_stream`, `search_by_name_prefix`, `update_last_active`, `set_status`, `rename`
 - [x] `POST /streams/:id/topics`
-  - [x] Require auth + space membership
-  - [x] Validate name: 1–128 chars
-  - [x] Check name uniqueness within stream (case-insensitive)
-  - [x] Set `last_active = NOW()`
-  - [x] Return `201` with `TopicDTO`
-- [x] `GET /streams/:id/topics`
-  - [x] Public streams in public spaces: no auth required
-  - [x] Accept `?status=open|resolved|archived|all` (default: `open`)
-  - [x] Accept `?cursor=<last_active_timestamp>` for pagination
-  - [x] Return ordered by `last_active DESC`, page size 50
-- [x] `PATCH /topics/:id` (rename)
-  - [x] Require auth + space membership (any member)
-  - [x] Validate new name, check uniqueness
-  - [x] Return `200` with updated `TopicDTO`
+- [x] `GET /streams/:id/topics` — status filter + cursor pagination
+- [x] `PATCH /topics/:id` — rename
 - [x] `PATCH /topics/:id/status`
-  - [x] Require auth + space membership
-  - [x] Validate value is `open`, `resolved`, or `archived`
-  - [x] Return `200` with updated `TopicDTO`
-- [x] `GET /streams/:id/topics?q=:prefix` (autocomplete)
-  - [x] Return top 10 matching topics by name prefix
-  - [x] Exclude `archived` from suggestions
-  - [x] Response time target: < 50ms
+- [x] `GET /streams/:id/topics?q=:prefix` — autocomplete < 50ms
 
 ---
 
@@ -325,248 +141,194 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 
 #### 0.5.1 Migration
 
-- [x] Write migration `0007_messages.sql`
-  - [x] `messages` table: `id UUID`, `topic_id UUID REFERENCES topics NOT NULL`, `author_id UUID REFERENCES users NOT NULL`, `content TEXT NOT NULL`, `rendered TEXT`, `edited_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ`
-  - [x] Index: `CREATE INDEX idx_messages_topic_time ON messages(topic_id, created_at)`
-  - [x] Index: `CREATE INDEX idx_messages_author ON messages(author_id)`
-  - [x] Constraint: `CHECK (length(content) > 0)`
+- [x] Migration `0007_messages.sql`
+- [ ] **AMEND**: add `embedding vector(384)` column to messages table
+- [ ] **AMEND**: add IVFFlat index (conditional on row count — see ARCHITECTURE.md)
 
 #### 0.5.2 Markdown Rendering
 
-- [x] Add `pulldown-cmark` to `pebesen-core`
-- [x] Implement `render_markdown(input: &str) -> String`
-  - [x] Enable: tables, footnotes, strikethrough, task lists
-  - [x] Sanitize output HTML — strip `<script>`, `<iframe>`, `on*` attributes
-  - [x] Add `target="_blank" rel="noopener noreferrer"` to all external links
-  - [x] Test: XSS vectors, nested markdown, code blocks with syntax hint
+- [x] `pulldown-cmark` in `pebesen-core`
+- [x] `render_markdown` with sanitization and link hardening
 
 #### 0.5.3 DB Queries
 
-- [x] `messages::insert(pool, topic_id, author_id, content, rendered) -> Message`
-  - [x] After insert: call `topics::update_last_active`
-- [x] `messages::get_page(pool, topic_id, cursor, limit) -> Vec<Message>`
-  - [x] Cursor: `created_at` timestamp, oldest-first
-  - [x] Exclude soft-deleted
-  - [x] Return `author: UserDTO` joined
-- [x] `messages::find_by_id(pool, id) -> Option<Message>`
-- [x] `messages::update_content(pool, id, author_id, new_content, new_rendered) -> Message`
-  - [x] Enforce: only `author_id` may update
-  - [x] Set `edited_at = NOW()`
-- [x] `messages::soft_delete(pool, id, requester_id, requester_role)`
-  - [x] Allow: author OR admin/owner
-  - [x] Set `deleted_at = NOW()`, clear `content` and `rendered`
+- [x] `messages::insert` (calls `topics::update_last_active`)
+- [x] `messages::get_page` (cursor, author join, exclude soft-deleted)
+- [x] `messages::find_by_id`
+- [x] `messages::update_content`
+- [x] `messages::soft_delete`
 
 #### 0.5.4 Handlers
 
 - [x] `POST /topics/:id/messages`
-  - [x] Require auth + space membership
-  - [x] Load topic — return `404` if not found
-  - [x] Return `403` if topic status is `archived`
-  - [x] Validate content: not empty, max 10,000 chars
-  - [x] Render Markdown
-  - [x] Insert message
-  - [x] After insert: call `topics::update_last_active`
-  - [x] Return `201` with `MessageDTO`
 - [x] `GET /topics/:id/messages`
-  - [x] Require auth + space membership
-  - [x] Accept `?cursor=<timestamp>&limit=N` (default limit 50, max 100)
-  - [x] Cursor: `created_at` timestamp, oldest-first
-  - [x] Return `MessageWithAuthorDTO[]` with `author`, `edited_at`, `is_deleted` flag
 - [x] `PATCH /messages/:id`
-  - [x] Require auth — must be message author
-  - [x] Validate new content
-  - [x] Re-render Markdown
-  - [x] Update Meilisearch index entry
-  - [x] Publish `{type: "message_updated"}` to Redis
-  - [x] Return `200` with updated `MessageDTO`
 - [x] `DELETE /messages/:id`
-  - [x] Require auth — author OR space admin/owner
-  - [x] Soft delete only
-  - [x] Remove from Meilisearch index
-  - [x] Publish `{type: "message_deleted", id}` to Redis
-  - [x] Return `204`
 
 ---
 
-### 0.6 WebSocket Real-Time `[MUST]`
+### 0.6 Contribution Primitive `[MUST]`
 
-#### 0.6.1 Connection Lifecycle
+> This is new in the re-architecture. Must complete before Phase 0 gate.
+> Contribution data must accumulate from the first real message sent.
+> No revenue is distributed in Phase 0 — but the data must exist.
 
-- [x] `GET /ws` — Axum WebSocket upgrade handler
-  - [x] Require auth (JWT in `?token=` query param or `Authorization` header)
-  - [x] On upgrade: create `ConnectionState { user_id, subscribed_spaces: HashSet }`
-  - [x] Store connection in `Arc<DashMap<UserId, Vec<WsSender>>>`
-  - [x] Spawn two tasks: `read_loop` and `write_loop`
-- [x] `read_loop` — handle incoming client frames
-  - [x] Parse JSON, match on `type`
-  - [x] `subscribe`: add `space_ids`, subscribe to Redis channels
-  - [x] `unsubscribe`: remove space, unsubscribe
-  - [x] `catch_up`: accept `{ last_seen: { [topic_id]: message_id } }`, return missed messages
-  - [x] `pong`: reset heartbeat timer
-  - [x] Unknown type: log, ignore (do not close connection)
-- [x] `write_loop` — push server events to client
-  - [x] Receive from Redis pub/sub subscriber
-  - [x] Receive from internal `tokio::mpsc` channel
-  - [x] Serialize and send as `Text` frame
-  - [x] On send error: log, break loop
-- [x] On disconnect: remove from connection map, unsubscribe all Redis channels
+#### 0.6.1 Migrations
 
-#### 0.6.2 Redis Pub/Sub
+- [ ] Migration `0008_expertise_domains.sql`
+  - [ ] `expertise_domains` table (id, slug, name, parent)
+  - [ ] Seed: 20 initial domains covering OSS, research, medicine, law, engineering, education
+- [ ] Migration `0009_topic_domains.sql`
+  - [ ] `topic_domains` table (topic_id, domain_id, tagged_by, tagged_at)
+- [ ] Migration `0010_contributions.sql`
+  - [ ] `contributions` table — see ARCHITECTURE.md for full spec
+  - [ ] Indexes on user_id+space_id, space_id+created_at, domain_id
+- [ ] Migration `0011_contributor_stats.sql`
+  - [ ] `contributor_stats` materialized view
+  - [ ] Unique index for fast upsert on refresh
 
-- [x] Channel naming: `space:{space_id}`
-- [x] Publish on: new message, message edit, message delete, topic created, topic updated, read position updated
-- [x] Message envelope: `{ type, space_id, payload }`
+#### 0.6.2 Core Types
 
-#### 0.6.3 Heartbeat
+- [ ] `ExpertiseDomain`, `TopicDomain`, `Contribution`, `ContributionType` structs in `pebesen-core`
+- [ ] `ContributionWeight` constants matching ARCHITECTURE.md weight table
+- [ ] `contributor_stats::refresh(pool)` — `REFRESH MATERIALIZED VIEW CONCURRENTLY`
 
-- [ ] Server sends `{ type: "ping" }` every 30 seconds
-- [ ] Start 10-second response timer after each ping
-- [ ] No `pong` within timer → close connection with code `1001`
-- [ ] Reset timer on any received frame
+#### 0.6.3 DB Queries (`pebesen-db`)
 
-#### 0.6.4 Reconnection Protocol
+- [ ] `contributions::record(pool, user_id, space_id, type, reference_id, domain_id) -> Contribution`
+  - [ ] Weight auto-assigned by type using `ContributionWeight` constants
+- [ ] `contributions::list_by_user_space(pool, user_id, space_id, since) -> Vec<Contribution>`
+- [ ] `contributor_stats::get_by_space(pool, space_id, limit) -> Vec<ContributorStat>`
+- [ ] `contributor_stats::get_by_user_space(pool, user_id, space_id) -> Option<ContributorStat>`
+- [ ] `expertise_domains::list(pool) -> Vec<ExpertiseDomain>`
+- [ ] `topic_domains::insert(pool, topic_id, domain_id, user_id)`
+- [ ] `topic_domains::list_by_topic(pool, topic_id) -> Vec<ExpertiseDomain>`
 
-- [ ] Client sends `{ type: "catch_up", last_seen: { "<topic_id>": "<message_id>" } }` on reconnect
-- [ ] Server queries missed messages per topic since given message id
-- [ ] Batch response: `{ type: "catch_up_response", topics: [ { topic_id, messages, has_more } ] }`
-- [ ] Limit: 200 messages per topic per catch-up
+#### 0.6.4 Integration Points
+
+Wire contribution recording into existing handlers:
+
+- [ ] `POST /topics/:id/messages` → `contributions::record(type=message)`
+- [ ] `POST /streams/:id/topics` → `contributions::record(type=topic_open)`
+- [ ] `PATCH /topics/:id/status` to `resolved` → `contributions::record(type=topic_resolve, user=resolver)`
+- [ ] `PATCH /topics/:id/summary` → `contributions::record(type=summary)`
+- [ ] Moderation actions (delete, ban) → `contributions::record(type=moderation, user=moderator)`
+
+#### 0.6.5 Scheduled Jobs
+
+- [ ] `pebesen-bin/refresh_stats.rs` — runs every 6h via cron or tokio interval
+  - [ ] Calls `REFRESH MATERIALIZED VIEW CONCURRENTLY contributor_stats`
+  - [ ] Logs: duration, rows affected
+- [ ] Add `make refresh-stats` to Makefile
+
+#### 0.6.6 Domain Tagging API
+
+- [ ] `POST /topics/:id/domains` — add domain tag to topic
+  - [ ] Require auth + space membership
+  - [ ] Max 5 domain tags per topic
+  - [ ] Return `201` with updated domain list
+- [ ] `DELETE /topics/:id/domains/:domain_id` — require admin/owner or tagger
+- [ ] `GET /topics/:id/domains` — public if topic is public
 
 ---
 
-### 0.7 Per-Topic Read State `[MUST]`
+### 0.7 WebSocket Real-Time `[MUST]`
 
-#### 0.7.1 Migration
+#### 0.7.1 Connection Lifecycle
 
-- [ ] Write migration `0008_read_positions.sql`
-  - [ ] `read_positions`: `user_id UUID`, `topic_id UUID`, `last_read_message_id UUID`, `last_read_at TIMESTAMPTZ`, `muted BOOLEAN DEFAULT FALSE`, `PRIMARY KEY (user_id, topic_id)`
-  - [ ] Index: `CREATE INDEX idx_read_positions_user ON read_positions(user_id)`
+- [x] `GET /ws` — JWT auth, ConnectionState, DashMap
+- [x] `read_loop`: subscribe, unsubscribe, catch_up, pong
+- [x] `write_loop`: Redis subscriber + mpsc
 
-#### 0.7.2 DB Queries
+#### 0.7.2 Redis Pub/Sub
 
-- [ ] `read_positions::upsert(pool, user_id, topic_id, message_id, timestamp)`
-  - [ ] `INSERT ... ON CONFLICT DO UPDATE` — only update if `message_id` is newer
-- [ ] `read_positions::get_unread_counts(pool, user_id, space_id) -> HashMap<TopicId, u32>`
-  - [ ] Single query joining `messages` with `read_positions`
-  - [ ] Exclude muted topics and deleted messages
-- [ ] `read_positions::set_muted(pool, user_id, topic_id, muted: bool)`
+- [x] Channel: `space:{space_id}`
+- [x] Publish on: message CRUD, topic CRUD/status, read position
+- [ ] Add event type: `contribution_recorded` — payload: `{user_id, type, space_id}` — used in Phase 2 for real-time weight display. Publish now, consume in Phase 2.
 
-#### 0.7.3 Handlers
+#### 0.7.3 Heartbeat
 
+- [ ] Server ping every 30s, 10s response window, close on timeout
+
+#### 0.7.4 Reconnection Protocol
+
+- [ ] `catch_up` frame → missed messages per topic since given message id
+- [ ] Batch response, limit 200 messages per topic
+
+---
+
+### 0.8 Per-Topic Read State `[MUST]`
+
+- [ ] Migration `0012_read_positions.sql`
+- [ ] `read_positions::upsert` — only update if message is newer
+- [ ] `read_positions::get_unread_counts` — single query, exclude muted + deleted
+- [ ] `read_positions::set_muted`
 - [ ] `POST /topics/:id/read`
-  - [ ] Require auth + membership
-  - [ ] Body: `{ last_read_message_id: UUID }`
-  - [ ] Upsert read position
-  - [ ] Publish `{ type: "read_position_updated" }` to Redis (multi-tab sync)
-  - [ ] Return `204`
-- [ ] `GET /spaces/:slug/unread`
-  - [ ] Require auth + membership
-  - [ ] Return `{ [topic_id]: unread_count }` for all non-muted topics
-  - [ ] Cache in Redis with 30s TTL, invalidate on `read_position_updated`
-- [ ] `POST /topics/:id/mute` — set `muted = true`, return `204`
-- [ ] `DELETE /topics/:id/mute` — set `muted = false`, return `204`
+- [ ] `GET /spaces/:slug/unread` — Redis cached 30s TTL
+- [ ] `POST /topics/:id/mute`, `DELETE /topics/:id/mute`
 
 ---
 
-### 0.8 No Presence by Default `[MUST]`
+### 0.9 No Presence by Default `[MUST]`
 
-- [ ] `PATCH /users/me/settings`
-  - [ ] Require auth
-  - [ ] Validate keys against allowlist: `show_presence`, `digest_schedule`, etc.
-  - [ ] Update `users.settings` JSONB
-  - [ ] Return `200` with updated settings
-- [ ] Presence heartbeat: `POST /users/me/presence`
-  - [ ] Only processes if `settings.show_presence = true`
-  - [ ] Write `presence:{user_id}` to Redis with 60s TTL
-  - [ ] Return `204`
-- [ ] `GET /users/:id/presence`
-  - [ ] Return `{ online: false }` if either party has not opted in
-  - [ ] Return `{ online: bool }` only if both have opted in
-  - [ ] Never expose `last_seen` timestamp to other users
-- [ ] Frontend: confirm no online indicator, status ring, or read receipt rendered anywhere in Phase 0
+- [ ] `PATCH /users/me/settings` — allowlisted keys only
+- [ ] `POST /users/me/presence` — no-op if `show_presence != true`
+- [ ] `GET /users/:id/presence` — both parties must opt in
 
 ---
 
-### 0.9 Search `[MUST]`
+### 0.10 Search `[MUST]`
 
-#### 0.9.1 Meilisearch Index Configuration
+#### 0.10.1 Meilisearch Index
 
-- [ ] Create index `messages` on startup (idempotent)
-  - [ ] `searchableAttributes`: `["content", "topic_name", "stream_name", "author_display_name"]`
-  - [ ] `filterableAttributes`: `["space_id", "stream_id", "topic_id", "author_id", "created_at", "topic_status"]`
-  - [ ] `sortableAttributes`: `["created_at"]`
-  - [ ] `rankingRules`: `["words", "typo", "proximity", "attribute", "sort", "exactness"]`
-  - [ ] `typoTolerance`: enabled, min word size 4
-- [ ] Define `SearchDocument` struct: `id`, `content`, `topic_id`, `topic_name`, `stream_id`, `stream_name`, `space_id`, `author_id`, `author_display_name`, `created_at`
+- [ ] Create `messages` index on startup (idempotent)
+- [ ] Include `domain_ids` as filterable attribute
+- [ ] `SearchDocument` struct includes `domain_ids`, `contribution_weight`
 
-#### 0.9.2 Async Indexer
+#### 0.10.2 Async Indexer
 
-- [ ] Implement `pebesen-search::indexer`
-  - [ ] Receive `IndexTask` via `tokio::mpsc` unbounded channel
-  - [ ] Batch: collect up to 100 tasks or 500ms, whichever comes first
-  - [ ] Send batch to Meilisearch
-  - [ ] On failure: retry up to 3 times with exponential backoff
-  - [ ] Task variants: `Add(MessageDoc)`, `Update(MessageDoc)`, `Delete(message_id)`
-- [ ] Wire indexer channel into message create/edit/delete handlers
+- [ ] Batch up to 100 tasks or 500ms
+- [ ] 3-retry exponential backoff
+- [ ] Task variants: Add, Update, Delete
 
-#### 0.9.3 Reindex Binary
+#### 0.10.3 Embedding Pipeline
 
-- [ ] `crates/bin/reindex.rs` (in `pebesen-bin` crate)
-  - [ ] Accept `--space <slug>` flag (optional)
-  - [ ] Stream all non-deleted messages from PostgreSQL in batches of 500
-  - [ ] Join with `topics`, `streams`, `users` for denormalized fields
-  - [ ] Send to Meilisearch in batches
-  - [ ] Print progress and final count
+- [ ] Add `fastembed` to `pebesen-search`
+- [ ] `embed_message(content: &str) -> Vec<f32>` using `all-MiniLM-L6-v2`
+- [ ] Async embed task: fires after message insert, updates `messages.embedding`
+- [ ] On failure: log, retry once, skip (embedding is not blocking for message delivery)
 
-#### 0.9.4 Search Handler
+#### 0.10.4 Reindex Binary
 
-- [ ] `GET /spaces/:slug/search`
-  - [ ] Auth: require membership for private, open for public
-  - [ ] Params: `q`, `stream_id`, `topic_id`, `author_id`, `before`, `after`, `page`, `limit` (max 50)
-  - [ ] Always inject `space_id` filter — no cross-space leakage
-  - [ ] Return `{ hits: SearchHitDTO[], total, page }`
-  - [ ] Each hit: `message_id`, truncated content with match highlight, `topic_id`, `topic_name`, `stream_name`, `author`, `created_at`
+- [ ] `pebesen-bin/reindex.rs` — streams all messages, batches to Meilisearch
+- [ ] Separate `pebesen-bin/reembed.rs` — backfills null embeddings
+
+#### 0.10.5 Search Handler
+
+- [ ] `GET /spaces/:slug/search` — q, stream_id, topic_id, author_id, domain_id, before, after
+- [ ] Always inject `space_id` filter — no cross-space leakage
+- [ ] Return hits with match highlights
 
 ---
 
-### 0.10 Public Read Access Without Join `[MUST]`
+### 0.11 Notifications `[MUST]`
 
-- [ ] Audit all `GET` endpoints — use `OptionalAuthUser` where public access is intended
-- [ ] `GET /spaces/:slug` — unauthenticated for public spaces
-- [ ] `GET /spaces/:slug/streams` — unauthenticated returns public streams only
-- [ ] `GET /streams/:id/topics` — unauthenticated if stream is public in public space
-- [ ] `GET /topics/:id/messages` — unauthenticated if topic is in public stream in public space
-- [ ] `GET /spaces/:slug/search` — unauthenticated for public spaces
-- [ ] Access control decision tree documented in `crates/api/src/auth.rs` (now `pebesen-api`) as inline comments
-- [ ] Integration test: unauthenticated request to each public endpoint returns `200`
-- [ ] Integration test: unauthenticated request to private space returns `403`
+- [ ] Migration `0013_notifications.sql`
+- [ ] `GET /notifications`, `POST /notifications/read`
+- [ ] Welcome digest on space join: top 5 active open topics per stream
 
 ---
 
-### 0.11 New Member Onboarding Digest `[MUST]`
+### 0.12 Public Read Access `[MUST]`
 
-#### 0.11.1 Notifications Table
-
-- [ ] Write migration `0009_notifications.sql`
-  - [ ] `notifications`: `id UUID`, `user_id UUID REFERENCES users`, `type TEXT`, `payload JSONB`, `read_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ`
-  - [ ] Index: `CREATE INDEX idx_notifications_user_unread ON notifications(user_id) WHERE read_at IS NULL`
-- [ ] `GET /notifications` — unread, newest first, cursor page size 20
-- [ ] `POST /notifications/read` — body: `{ ids: UUID[] }` or `{ all: true }` — set `read_at`
-
-#### 0.11.2 Welcome Digest Generation
-
-- [ ] `fn generate_welcome_digest(pool, space_id, depth_days: u32) -> Vec<TopicDigestItem>`
-  - [ ] Query: top 5 most-active open topics per stream in last `depth_days` days
-  - [ ] Sort by `message_count DESC`
-  - [ ] Return: `stream_name`, `topic_id`, `topic_name`, `message_count`, `last_active`
-- [ ] Wire into `POST /spaces/:slug/join` — call after membership insert
-- [ ] Write digest items to `notifications` table
-- [ ] Depth options: 7 / 30 / 90 days via `?digest_depth=` on join endpoint
+- [ ] Audit all GET endpoints for correct `OptionalAuthUser` usage
+- [ ] Integration tests: unauthenticated public, unauthenticated private → 403
 
 ---
 
-### 0.12 Frontend: Phase 0 Views `[MUST]`
+### 0.13 Frontend: Phase 0 Views `[MUST]`
 
-#### 0.12.1 Routing Structure
+#### 0.13.1 Routing Structure
 
 - [ ] Define SvelteKit route tree
   - [ ] `/(auth)/login`
@@ -579,7 +341,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
   - [ ] `/(app)/settings/+page.svelte`
   - [ ] `/(public)/s/[slug]/+page.svelte` — public read-only
 
-#### 0.12.2 Global State Stores
+#### 0.13.2 Global State Stores
 
 - [ ] `stores/identity.ts` — current user, cleared on logout
 - [ ] `stores/connection.ts` — WS state machine: `idle | connecting | connected | reconnecting | failed`
@@ -588,8 +350,9 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] `stores/spaces.ts` — joined spaces list, active space
 - [ ] `stores/unread.ts` — `Map<topic_id, count>`, updated by WS events + mark-read
   - [ ] Derived: `totalUnread` — sum across all spaces
+- [ ] `stores/contributions.ts` — own contribution weight per space, read-only Phase 0
 
-#### 0.12.3 Auth Pages
+#### 0.13.3 Auth Pages
 
 - [ ] `/login`
   - [ ] Email + password fields
@@ -597,40 +360,40 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
   - [ ] On success: redirect to last visited space or `/`
   - [ ] Inline error on `401`
 - [ ] `/register`
-  - [ ] Username, email, password, confirm-password
+  - [ ] Username, email, password, confirm-password fields
   - [ ] Client-side validation before submit
   - [ ] Inline error on `409` — specify whether email or username is taken
 
-#### 0.12.4 Space Shell Layout
+#### 0.13.4 Space Shell Layout
 
 - [ ] Left sidebar (240px, collapsible on mobile)
   - [ ] Space name + settings icon
   - [ ] Stream list: name + unread badge (sum of topic unreads in stream)
   - [ ] Active stream highlighted
   - [ ] "Create stream" button (admin/owner only)
-  - [ ] Bottom: user avatar, username, settings link
+  - [ ] Bottom: own contribution weight (numeric only, no framing), user avatar, username, settings link
 - [ ] Main content: `<slot />` outlet
 - [ ] Connection status bar (visible only when `connecting` or `reconnecting`)
 
-#### 0.12.5 Topic List View
+#### 0.13.5 Topic List View
 
 - [ ] List topics ordered by `last_active DESC`
-- [ ] Each row: topic name, status badge, unread count, relative timestamp
+- [ ] Each row: topic name, status badge, unread count, relative timestamp, domain tags
 - [ ] Filter tabs: `Open` | `Resolved` | `All`
 - [ ] "New topic" inline input: submit creates + navigates
 - [ ] Empty state: "No open topics. Start the first one."
 - [ ] Catch-up banner: "N unread topics" → opens `CatchUpQueue`
 
-#### 0.12.6 CatchUpQueue Component
+#### 0.13.6 CatchUpQueue Component
 
 - [ ] Triggered by banner or `U` keyboard shortcut
 - [ ] Ordered: mentions first, then `last_active DESC`
 - [ ] Each item: stream name, topic name, unread count
 - [ ] Keyboard: `↑/↓` navigate, `Enter` open, `S` skip (mark read), `Esc` close
 
-#### 0.12.7 Message Feed View
+#### 0.13.7 Message Feed View
 
-- [ ] Topic header: name, status badge, status dropdown (any member), message count
+- [ ] Topic header: name, status badge, status dropdown (any member), message count, domain tags
 - [ ] Virtualized message list
   - [ ] Each: avatar, display name, timestamp, rendered HTML
   - [ ] Edited indicator: "(edited)" in muted text
@@ -642,27 +405,27 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Mark read: triggered when topic open + user at bottom for 2 seconds
 - [ ] Explicit "Mark as read" button in header
 
-#### 0.12.8 Compose Box
+#### 0.13.8 Compose Box
 
 - [ ] Topic selector: required, dropdown with autocomplete
   - [ ] Pre-filled from current topic view
-  - [ ] Block send if no topic — show "Select a topic first"
+  - [ ] Block send if no topic selected — show "Select a topic first"
 - [ ] Textarea: Markdown input, auto-grows to 6 rows max
   - [ ] `Enter` sends, `Shift+Enter` newlines
   - [ ] `Ctrl+B` bold, `Ctrl+I` italic, `Ctrl+K` link
 - [ ] Markdown toolbar: Bold, Italic, Code, Link, Lists
-- [ ] Draft autosave: `sessionStorage` key `draft:{topic_id}`, debounced 500ms
+- [ ] Draft autosave: `sessionStorage` key `draft:{space_id}:{topic_id}`, debounced 500ms
 - [ ] Restore draft on mount, clear on send
 
-#### 0.12.9 Search UI
+#### 0.13.9 Search UI
 
 - [ ] `Ctrl+K` or `/` focuses search bar
 - [ ] Debounce 300ms → `GET /spaces/:slug/search?q=`
 - [ ] Results panel: grouped by topic, snippet with match highlighted, timestamp
+- [ ] Filter: domain tag, stream, author, date range
 - [ ] "No results" empty state
-- [ ] Advanced filters: stream, author, date range
 
-#### 0.12.10 Settings Page
+#### 0.13.10 Settings Page
 
 - [ ] Display name edit
 - [ ] Password change (current + new + confirm)
@@ -670,367 +433,366 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Notification default: immediate / digest / muted
 - [ ] Save → `PATCH /users/me/settings` — success/error toast
 
----
+#### 0.13.11 Contribution Display (Phase 0 — read-only)
 
-## Phase 1 — First Retention Features
-
-**Goal:** Reduce churn from the three documented drop-off causes: multi-community fatigue, no lurker UX, no neurodivergent accommodation.
-
-**Gate to Phase 2:** Retained communities report at least one of: (a) migrated knowledge from old platform, (b) onboarded a member who stayed active 14+ days, (c) a user reports using it across 3+ communities.
-
----
-
-### 1.1 Unified Inbox `[SHOULD]`
-
-- [ ] `GET /inbox`
-  - [ ] Require auth
-  - [ ] Return all unread mentions + keyword alerts across all joined spaces
-  - [ ] Join with `messages`, `topics`, `streams`, `spaces`
-  - [ ] Sort by `created_at DESC`, cursor pagination page size 30
-  - [ ] Accept `?space_id=`, `?type=mention|keyword|reply`
-- [ ] `/inbox` route in `/(app)/inbox/+page.svelte`
-  - [ ] Global nav: "Inbox" link with total unread badge (real-time via WS)
-  - [ ] List item: space name, stream, topic, message preview, timestamp
-  - [ ] Filter bar: All | Mentions | Keywords | Replies
-  - [ ] Mark individual read: `POST /notifications/read`
-  - [ ] Mark all read button
-  - [ ] Keyboard shortcut: `G I` → go to inbox
+- [ ] Space sidebar footer: own contribution weight for this space as plain number
+- [ ] Tooltip on hover: breakdown by type (messages, topics opened, summaries, moderation)
+- [ ] No badges, levels, streaks, rankings, or progress bars anywhere in Phase 0 UI
+- [ ] Code review gate: any gamification element is a blocking PR rejection
 
 ---
 
-### 1.2 Topic Summary Card `[SHOULD]`
+## Phase 1 — Retention and Identity
 
-- [ ] Migration: add `summary TEXT`, `summary_rendered TEXT` columns to `topics`
-- [ ] `PATCH /topics/:id/summary`
-  - [ ] Require auth + membership (any member)
-  - [ ] Validate: max 1000 chars
-  - [ ] Render Markdown, store `summary_rendered`
-  - [ ] Return `200` with updated topic
-- [ ] Include `summary_rendered` in `TopicDTO`
-- [ ] Frontend: summary card above message feed if non-null
-  - [ ] Collapsible, preference in `localStorage`
-  - [ ] Inline editor: Markdown textarea, preview toggle, save + cancel
-  - [ ] Empty state hint for admins: "Add a summary to help newcomers"
+**Goal:** Reduce churn from multi-community fatigue, no lurker UX, and no neurodivergent accommodation. Begin self-sovereign credential infrastructure.
+
+**Gate to Phase 2:** Communities report one of: (a) migrated knowledge from old platform, (b) onboarded member active 14+ days, (c) user active across 3+ communities. Contribution data passes quality check: no weight anomalies, distribution looks reasonable.
 
 ---
 
-### 1.3 Topic Status Flags — Full UI `[SHOULD]`
+### 1.1 Verified Expertise — Self-Sovereign `[MUST]`
 
-- [ ] Status dropdown in topic header (any member)
-  - [ ] Confirmation modal before archiving
-- [ ] `Resolved`: muted text in topic list, grey badge
-- [ ] `Archived`: hidden from default list, visible under "Archived" tab
-  - [ ] Compose box disabled: "This topic is archived"
-- [ ] WS event `topic_status_updated` → reactive update without reload
+> Elevated from Phase 2 NICE. This is the primary moat. Build it before revenue distribution.
 
----
+#### 1.1.1 Migrations
 
-### 1.4 Anonymous Reactions `[SHOULD]`
+- [ ] Migration `0014_oauth_identities.sql`
+- [ ] Migration `0015_verified_credentials.sql` — see ARCHITECTURE.md
+  - [ ] `verification_type`: license_number, institution_email, orcid, github_org, manual_review
+  - [ ] `status`: pending, verified, revoked
+  - [ ] Verification data encrypted at app layer before storage
 
-- [ ] Migration `0010_reactions.sql`
-  - [ ] `message_reactions`: `message_id UUID`, `user_id UUID`, `emoji TEXT`, `PRIMARY KEY (message_id, user_id, emoji)`
-- [ ] `POST /messages/:id/reactions` — body: `{ emoji }`, idempotent, publish WS event
-- [ ] `DELETE /messages/:id/reactions/:emoji` — own reactions only
-- [ ] Include aggregated counts in `MessageDTO`: `{ emoji, count, reacted }[]`
-- [ ] Frontend: reaction bar below messages, `+` opens emoji picker
-- [ ] Reactions update real-time via WS
-- [ ] Space setting: `anonymous_reactions` — show counts only, hide individuals
+#### 1.1.2 Verification Flows
 
----
+- [ ] `institution_email`: user submits institutional email → platform sends verification link → auto-verified on click
+- [ ] `orcid`: OAuth2 with ORCID → fetch public profile → auto-verify researcher domains
+- [ ] `github_org`: GitHub OAuth → verify org membership → auto-verify relevant tech domains
+- [ ] `license_number`: user submits license number + jurisdiction → enters manual review queue
+- [ ] `manual_review`: admin reviews queue — UI in space admin panel
 
-### 1.5 Read-Mode UI `[SHOULD]`
+#### 1.1.3 API
 
-- [ ] Toggle in topic header (`R` keyboard shortcut)
-- [ ] Hides: compose box, unread badges, hover action icons
-- [ ] Increases: font size to 16px, line height to 1.8
-- [ ] Persisted in `localStorage` key `readMode`
-- [ ] Does not affect navigation
+- [ ] `POST /users/me/credentials` — submit verification request
+- [ ] `GET /users/me/credentials` — own credentials list
+- [ ] `GET /users/:id/credentials?space_id=` — public verified badges for user in domain context
+- [ ] `GET /admin/credentials/queue` — admin only, manual review queue
+- [ ] `PATCH /admin/credentials/:id` — approve/revoke
 
----
+#### 1.1.4 Credential → Contribution Domain Linkage
 
-### 1.6 Notification Scheduling `[SHOULD]`
+- [ ] When credential verified → backfill domain_id on recent contributions where domain was null and topic domain matches
+- [ ] Verified contributor gets `weight_multiplier = 1.2` on `message` contributions in verified domain (configurable)
 
-- [ ] Migration: `notification_preferences` table + `keyword_alerts` table
-- [ ] `GET/PUT /users/me/notification-preferences`
-- [ ] `GET/POST/DELETE /users/me/keyword-alerts` (max 20 per user)
-- [ ] Digest job: cron per user's `digest_schedule`, assembles unread digest, sends email
-  - [ ] Template: grouped by space → stream → topic, unread count, direct link
-- [ ] Frontend: Settings > Notifications
-  - [ ] Global default selector
-  - [ ] Available hours widget: day-of-week × time-of-day range, timezone-aware
-  - [ ] Digest schedule dropdown
-  - [ ] Keyword alerts list: add + delete
+#### 1.1.5 Frontend
+
+- [ ] Settings > Credentials — submit verification, view status
+- [ ] Verified badge display on member profile within relevant domains only
+- [ ] No cross-domain badge bleed (a verified doctor has no badge in a Rust programming space)
 
 ---
 
-### 1.7 Focus Mode `[SHOULD]`
+### 1.2 Unified Inbox `[SHOULD]`
 
-- [ ] `F` keyboard shortcut toggles (within topic view)
-- [ ] Hides: sidebar (collapsed to 0px), unread badges, activity indicators
-- [ ] Changes page title to topic name only
-- [ ] Persisted in `localStorage` key `focusMode`
-- [ ] Auto-deactivates on space navigation
-- [ ] "Focus" chip in top bar with click-to-dismiss
+- [ ] `GET /inbox` — unread mentions + keyword alerts across all spaces
+- [ ] `/(app)/inbox/` route with global unread badge
+- [ ] Filter: All | Mentions | Keywords | Replies
+- [ ] Keyboard: `G I`
 
 ---
 
-### 1.8 Draft Autosave `[SHOULD]`
+### 1.3 OAuth2 Login `[SHOULD]`
 
-- [ ] Save on keystroke, debounced 500ms
-- [ ] Key: `draft:{space_id}:{topic_id}` in `sessionStorage` (not localStorage)
-- [ ] Restore on mount, clear on send or manual clear
-- [ ] "Draft saved" indicator in muted text
-
----
-
-### 1.9 OAuth2 Login `[SHOULD]`
-
-- [ ] Migration `0011_oauth_identities.sql`: `user_id`, `provider`, `provider_user_id`, `UNIQUE(provider, provider_user_id)`
-- [ ] GitHub OAuth2: `GET /auth/github` redirect + `GET /auth/github/callback`
-  - [ ] Match by email → link to existing, else create new user
-  - [ ] Insert `oauth_identity`, issue JWT
+- [ ] Migration `0014_oauth_identities.sql` (same migration as 1.1.1)
+- [ ] GitHub OAuth2: `/auth/github` + `/auth/github/callback`
 - [ ] Google OAuth2: same pattern
-- [ ] Frontend: "Continue with GitHub" + "Continue with Google" on login + register
-- [ ] Settings > Account: "Connected accounts" — show providers, unlink button
+- [ ] Settings > Account: connected accounts, unlink
 
 ---
 
-### 1.10 Accessibility — Neurodivergent Baseline `[SHOULD]`
+### 1.4 Topic Summary Card `[SHOULD]`
 
-- [ ] High-contrast mode
-  - [ ] CSS custom property overrides for all colour tokens
-  - [ ] Toggle in settings, detects `prefers-contrast: more`
-- [ ] Reduced-motion mode
-  - [ ] All transitions wrapped in `@media (prefers-reduced-motion: reduce)`
-  - [ ] Manual toggle overrides system setting
-- [ ] Keyboard navigation
-  - [ ] Tab order: sidebar → topic list → feed → compose
-  - [ ] All interactive elements reachable by Tab
-  - [ ] Modals trap focus, restore on close
-- [ ] Shortcut map: `?` opens overlay listing all shortcuts
-- [ ] ARIA
-  - [ ] Landmark roles on all layout regions
-  - [ ] `aria-label` on all icon-only buttons
-  - [ ] `aria-live="polite"` on unread badge changes
-  - [ ] `role="status"` on connection status bar
-  - [ ] Screen reader test with VoiceOver (macOS) — document results
+- [ ] `PATCH /topics/:id/summary` — any member, max 1000 chars, renders Markdown
+- [ ] Wire `contributions::record(type=summary)` on save
+- [ ] Frontend: collapsible card above message feed, inline editor with preview
 
 ---
 
-### 1.11 Member Tenure Signal `[SHOULD]`
+### 1.5 Notification Scheduling `[SHOULD]`
 
-- [ ] `GET /spaces/:slug/members/:user_id`
-  - [ ] Return: `joined_at`, message count per stream (top 5), total count
-  - [ ] No rank, score, or gamified metric
-- [ ] Member profile card on username click
-  - [ ] "Member since {date}", top contribution streams (factual, no bar chart)
-  - [ ] No badges, XP, level, streak — enforced in code review gate
+- [ ] `notification_preferences` + `keyword_alerts` tables
+- [ ] Digest cron job per user schedule — email with grouped unread
+- [ ] Settings > Notifications — global default, available hours, digest schedule, keyword alerts
 
 ---
 
-### 1.12 Data Export `[SHOULD]`
+### 1.6 Anonymous Reactions `[SHOULD]`
 
-- [ ] `POST /spaces/:slug/export` → `202 Accepted` with `{ job_id }`
-  - [ ] Require owner/admin, rate-limit once per 24h
-- [ ] Export job (background)
-  - [ ] JSON: ndjson per stream, full message content + author + timestamps
-  - [ ] Markdown: one `.md` per topic, threaded by timestamp
-  - [ ] Zip both, store in `exports/` volume
-  - [ ] Write to `export_jobs` table: `id`, `status`, `file_path`, `expires_at`
-- [ ] `GET /spaces/:slug/export/:job_id` — poll: `pending | complete | failed`
-- [ ] `GET /exports/:token` — download, delete after download or 24h TTL
-- [ ] Frontend: Settings > Space > Export
-  - [ ] "Export all data" button, last export date, progress spinner, download link
+- [ ] Migration `message_reactions` (message_id, user_id, emoji, PRIMARY KEY on all three)
+- [ ] `POST/DELETE /messages/:id/reactions`
+- [ ] Wire into `contributions::record(type=reaction_net)` — daily aggregation job
+  - [ ] Aggregation: for each author in each space, sum net reactions received that day, write single contribution record
+- [ ] Frontend: reaction bar, emoji picker, real-time WS updates
+- [ ] Space setting: `anonymous_reactions` — counts only, no individual visibility
 
 ---
 
-## Phase 2 — Differentiation Compounds
+### 1.7 Accessibility — Neurodivergent Baseline `[SHOULD]`
 
-**Goal:** Activate the features that make the product structurally irreplaceable.
-
-**Gate to Phase 3:** At least one community reports "we couldn't go back — our knowledge is here."
-
----
-
-### 2.1 Expertise Map `[SHOULD]`
-
-- [ ] Migration: `topic_domains` table — `topic_id`, `domain_tag TEXT`
-- [ ] Materialized view: message count per `(author_id, domain_tag)`, refreshed every 6h
-- [ ] `GET /spaces/:slug/experts?domain=` — top 10 contributors per domain
-- [ ] `GET /topics/:id/suggest-experts` — up to 3 suggested experts for topic's domains
-- [ ] Frontend: `/s/:slug/experts` page
-  - [ ] Stream breakdown: top 3 contributors per stream
-  - [ ] Domain tags: clickable, filter to domain experts
-  - [ ] No ranking numbers — names and contribution area only
-- [ ] "Ask an expert" CTA in topic header with suggested @mention links
+- [ ] High-contrast mode (CSS custom property overrides, `prefers-contrast: more`)
+- [ ] Reduced-motion mode (all transitions in `@media (prefers-reduced-motion: reduce)`)
+- [ ] Full keyboard navigation (Tab order, focus trap in modals)
+- [ ] `?` shortcut map overlay
+- [ ] ARIA: landmark roles, aria-label on icon buttons, aria-live on unread badges
+- [ ] Screen reader test with VoiceOver — document results
 
 ---
 
-### 2.2 SEO-Indexable Public Streams `[SHOULD]`
+### 1.8 Focus Mode + Read Mode `[SHOULD]`
 
-- [ ] Enable SvelteKit SSR for all `/(public)/` routes
-- [ ] For each public topic page, set server-side:
-  - [ ] `<title>`: `{topic_name} — {stream_name} — {space_name} | Pebesen`
-  - [ ] `<meta name="description">`: first 160 chars of first message
-  - [ ] `<link rel="canonical">`
-  - [ ] `<meta property="og:*">` tags
-- [ ] `robots.txt`: allow public spaces, disallow private + auth routes
-- [ ] `GET /s/:slug/sitemap.xml` — paginated, max 50,000 URLs, `<lastmod>` from `last_active`
-- [ ] Audit: no private message content in SSR responses
+- [ ] Focus (`F`): hides sidebar + unread badges, page title = topic name, sessionStorage
+- [ ] Read (`R`): hides compose + hover actions, font 16px, line-height 1.8, sessionStorage
 
 ---
 
-### 2.3 Self-Hosting Documentation `[SHOULD]`
+### 1.9 Data Export `[SHOULD]`
 
-- [ ] `docs/self-hosting.md`: prerequisites, step-by-step, SMTP config, custom domain + TLS, troubleshooting
-- [ ] `docs/upgrade.md`: pull image, run compose, rollback procedure
-- [ ] `docs/backup.md`: pg_dump, volume backup, recommended schedule
-- [ ] Publish to GHCR via CI on tag: `ghcr.io/SHA888/pebesen:latest` + semver tag
-- [ ] Test complete install on clean Ubuntu 24.04 LTS VPS (1GB RAM)
-
----
-
-### 2.4 AI Topic Summaries `[NICE]`
-
-- [ ] Migration: add `ai_summary TEXT`, `ai_summary_generated_at TIMESTAMPTZ` to `topics`
-- [ ] Background job (every 15 min): find topics with 20+ messages and stale/missing AI summary
-  - [ ] Fetch last 50 messages, send to configured provider
-  - [ ] Provider: `AI_PROVIDER=anthropic|ollama|none` in `.env` (default `none`)
-- [ ] Store in `topics.ai_summary`, manual summary always takes precedence
-- [ ] Frontend: show `ai_summary` in summary card with "AI-generated" label in muted text
-- [ ] Admin space setting: `ai_summaries_enabled` — defaults to `false`
+- [ ] `POST /spaces/:slug/export` → `202` with job_id
+- [ ] Export job: JSON (ndjson per stream) + Markdown (one .md per topic) → zip
+- [ ] `GET /spaces/:slug/export/:job_id` — poll
+- [ ] Download link, 24h TTL, delete after download
 
 ---
 
-### 2.5 Smart Topic Name Suggestion `[NICE]`
+### 1.10 Member Tenure Signal `[SHOULD]`
 
-- [ ] Compose box: suggest topic when textarea has content but no topic selected
-- [ ] Client-side heuristic:
-  - [ ] Extract first 80 chars, strip punctuation, lowercase, remove stop words
-  - [ ] Fuzzy match against cached topic list via Fuse.js
-  - [ ] Show top match as chip: "Did you mean: {topic_name}?"
-- [ ] Click chip: select topic; `×` dismisses
+- [ ] `GET /spaces/:slug/members/:user_id` — joined_at, message count per stream, total
+- [ ] Member profile card: "Member since {date}", top contribution domains
+- [ ] No rank, score, XP, level, streak, or bar chart — enforced in code review gate
 
 ---
 
-### 2.6 E2E Encrypted DMs `[SHOULD]`
+### 1.11 Draft Autosave `[SHOULD]`
 
-- [ ] Migration: `dm_keys` (`user_id PK`, `public_key TEXT`, `created_at`)
-- [ ] Migration: `direct_messages` (`id`, `sender_id`, `recipient_id`, `ciphertext`, `nonce`, `created_at`)
-- [ ] `PUT /users/me/dm-key` — register public key (generated client-side)
-- [ ] `GET /users/:id/dm-key` — fetch recipient's public key
-- [ ] `POST /dm/:user_id` — store ciphertext only, no plaintext ever
-- [ ] `GET /dm/:user_id` — return ciphertext thread, decrypted client-side
-- [ ] Key generation: X25519 keypair on first DM use, private key in `sessionStorage` only
+- [ ] Key: `draft:{space_id}:{topic_id}` in sessionStorage (not localStorage)
+- [ ] Debounced 500ms, clear on send, restore on mount
+
+---
+
+### 1.12 Mobile Web — Responsive Hardening `[SHOULD]`
+
+- [ ] Audit all Phase 0+1 views at 375px, 390px, 428px
+- [ ] Sidebar full-screen overlay on mobile, hamburger trigger
+- [ ] iOS visualViewport keyboard handling for compose box
+- [ ] All touch targets ≥ 44px
+- [ ] PWA manifest + service worker (app shell + static asset cache)
+- [ ] Test: iOS Safari + Android Chrome install
+
+---
+
+## Phase 2 — Revenue Activation
+
+**Goal:** Activate all four revenue streams. Contributor payouts go live. B2B intelligence API launches. Verified expertise subscription tier opens.
+
+**Gate to Phase 3:** At least one community reports "we couldn't go back — our knowledge is here." At least one B2B intelligence subscriber. Payout infrastructure tested end-to-end with real amounts.
+
+---
+
+### 2.1 Subscription Billing `[MUST]`
+
+- [ ] Integrate payment provider (Stripe or equivalent)
+- [ ] Migration `0016_revenue_events.sql`
+- [ ] Webhook handler: payment confirmed → `revenue_events::insert`
+- [ ] Space tier upgrade/downgrade flow
+- [ ] Frontend: Settings > Space > Billing
+
+---
+
+### 2.2 Contributor Revenue Sharing `[MUST]`
+
+- [ ] Migration `0017_contributor_payouts.sql`
+- [ ] Attribution job (runs at period end):
+  - [ ] Reads `contributor_stats` for space + period
+  - [ ] Computes payout per contributor: `(contributor_weight / total_weight) × (space_revenue × payout_fraction)`
+  - [ ] Writes `contributor_payouts` rows
+- [ ] Payout processing: Stripe Connect (or equivalent)
+- [ ] Contributor opt-out: `receive_payouts = false` in user settings
+  - [ ] Opt-out share routes to space owner, not silently redistributed
+- [ ] `GET /users/me/payouts` — payout history with period breakdown
+- [ ] `GET /spaces/:slug/payouts/summary` — owner/admin: total distributed, top recipients (anonymized below 5)
+- [ ] Frontend: Settings > Payouts — connect bank, payout history, opt-out toggle
+
+---
+
+### 2.3 B2B Intelligence API `[MUST]`
+
+> Separate crate: `pebesen-intelligence`. Separate API surface.
+
+- [ ] API key management: `POST /v1/intelligence/keys` — space-owner only
+- [ ] Space opt-in: `PATCH /spaces/:slug/settings` — `intelligence_api_enabled: bool`
+- [ ] Implement endpoints (see ARCHITECTURE.md for full spec):
+  - [ ] `GET /v1/intelligence/spaces/:slug/domains`
+  - [ ] `GET /v1/intelligence/spaces/:slug/domains/:domain/signal`
+  - [ ] `GET /v1/intelligence/spaces/:slug/experts`
+  - [ ] `GET /v1/intelligence/spaces/:slug/topics/trending`
+- [ ] Privacy constraints enforced at query layer:
+  - [ ] Counts anonymized below threshold 5
+  - [ ] Individual data only if `intelligence_opt_in = true`
+  - [ ] No raw message content in any endpoint
+- [ ] Rate limiting: 1000 req/day on free tier, configurable per key
+- [ ] Usage logging for billing
+- [ ] Frontend: Settings > Space > Intelligence API — enable toggle, key management, usage dashboard
+
+---
+
+### 2.4 Verified Expertise Subscription Tier `[MUST]`
+
+- [ ] Subscription product: professionals pay monthly for active verification maintenance
+- [ ] Free tier: one domain verification, standard weight multiplier
+- [ ] Paid tier: multiple domain verifications, enhanced weight multiplier, priority manual review
+- [ ] Billing integration for credential subscriptions
+
+---
+
+### 2.5 Expertise Map `[SHOULD]`
+
+- [ ] `GET /spaces/:slug/experts?domain=` — top contributors per domain by `contributor_stats.total_weight`
+- [ ] `GET /topics/:id/suggest-experts` — up to 3 experts in topic's domains
+- [ ] Frontend: `/s/:slug/experts` — domain breakdown, contributor names, no ranking numbers
+- [ ] "Ask an expert" CTA in topic header
+
+---
+
+### 2.6 Cross-Community Semantic Search `[SHOULD]`
+
+- [ ] `GET /search/similar?topic_id=:id&limit=10`
+  - [ ] Embed topic's first message → nearest via `<=>` pgvector operator
+  - [ ] Filter to user's spaces only — no cross-space content leak
+- [ ] "Similar discussions" panel in topic view
+
+---
+
+### 2.7 SEO-Indexable Public Streams `[SHOULD]`
+
+- [ ] SvelteKit SSR for all `/(public)/` routes
+- [ ] Server-side: title, description, canonical, og:* tags
+- [ ] `robots.txt`: allow public spaces, disallow private + auth
+- [ ] `GET /s/:slug/sitemap.xml` — paginated, max 50,000 URLs
+
+---
+
+### 2.8 MCP Connector `[SHOULD]`
+
+> Elevated from Phase 3 NICE. This is a B2B revenue surface.
+
+- [ ] Implement MCP server in `pebesen-bin/mcp.rs` (or `crates/pebesen-mcp`)
+- [ ] Tools: `post_message`, `list_topics`, `search_messages`, `get_topic_summary`, `get_unread_topics`, `get_domain_experts`
+- [ ] Auth: bot API keys (same namespace as webhook bots)
+- [ ] Publish to MCP registry with README and example prompts
+- [ ] Optional `mcp` service in `docker-compose.yml` (disabled by default)
+- [ ] Commercial: MCP access part of Standard/Scale tier
+
+---
+
+### 2.9 E2E Encrypted DMs `[SHOULD]`
+
+- [ ] `dm_keys` (user_id PK, public_key TEXT, created_at)
+- [ ] `direct_messages` (id, sender_id, recipient_id, ciphertext, nonce, created_at)
+- [ ] Key generation: X25519 keypair client-side, private key in sessionStorage only
 - [ ] Encryption: ECDH shared secret → XChaCha20-Poly1305
-- [ ] `/dm/:username` route — DM thread view
-- [ ] DMs NOT indexed in Meilisearch
+- [ ] DMs not indexed in Meilisearch, not embedded, not in intelligence API
 - [ ] Warning banner: "Messages are end-to-end encrypted. Pebesen cannot read them."
 
 ---
 
-### 2.7 Verified Credential Badges `[NICE]`
+### 2.10 AI Topic Summaries `[NICE]`
 
-- [ ] Migration: `badge_types` (`id`, `space_id`, `name`, `description`, `icon`)
-- [ ] Migration: `member_badges` (`user_id`, `space_id`, `badge_type_id`, `awarded_by`, `awarded_at`)
-- [ ] `POST /spaces/:slug/badge-types` — admin only
-- [ ] `POST/DELETE /spaces/:slug/members/:user_id/badges` — admin only
-- [ ] Display on member profile within that space only
-- [ ] No cross-space badge visibility — enforced at query level
+- [ ] Background job: topics with 20+ messages, stale/missing summary, every 15 min
+- [ ] Provider: `AI_PROVIDER=anthropic|ollama|none` (default `none`)
+- [ ] Store in `topics.ai_summary`, manual summary always takes precedence
+- [ ] Frontend: "AI-generated" label in muted text
+- [ ] Space setting: `ai_summaries_enabled` — defaults to false
 
 ---
 
-### 2.8 Mobile Web — Responsive Hardening `[SHOULD]`
+### 2.11 Self-Hosting Documentation `[MUST]`
 
-- [ ] Audit all Phase 0 + 1 views at 375px, 390px, 428px
-  - [ ] Sidebar: full-screen overlay on mobile, hamburger trigger
-  - [ ] Compose box: fixed to bottom, iOS `visualViewport` keyboard handling
-  - [ ] All touch targets: 44px minimum
-- [ ] Swipe left on topic list item → "Mark read" action
-- [ ] PWA manifest (`static/manifest.json`): `name`, `short_name`, `theme_color`, `icons`, `display: standalone`
-- [ ] Service worker: cache app shell + static assets
-- [ ] Test: install as PWA on iOS Safari + Android Chrome
+- [ ] `docs/self-hosting.md`: prerequisites, step-by-step, SMTP, custom domain + TLS, troubleshooting
+- [ ] `docs/upgrade.md`: pull, compose, rollback
+- [ ] `docs/backup.md`: pg_dump, volume backup, schedule
+- [ ] `docs/contributor-payouts.md`: how weights are computed, how payouts are calculated, opt-out instructions
+- [ ] Publish to GHCR via CI on tag: `ghcr.io/SHA888/pebesen:latest` + semver
+- [ ] Test full install on clean Ubuntu 24.04 LTS VPS (1GB RAM)
 
 ---
 
 ## Phase 3 — Network Effects
 
-**Goal:** Cross-community discovery and developer ecosystem that creates compounding value.
+**Goal:** Cross-community discovery and developer ecosystem creating compounding value.
 
-**Gate:** No gate — continuous. These are growth levers, not survival features.
+**Gate:** None — continuous. These are growth levers, not survival features.
 
 ---
 
 ### 3.1 Public Community Directory `[NICE]`
 
-- [ ] Migration: add `listed BOOLEAN DEFAULT FALSE` to `spaces`
-- [ ] Admin setting: opt-in to directory
-- [ ] `GET /explore` — public, no auth
-  - [ ] Filters: `?sort=activity|members|created`, `?language=`
-  - [ ] Returns `SpaceCardDTO`: name, slug, description, member count, top 3 streams, last activity
-- [ ] Frontend: `/explore` — grid of space cards, client-side filter bar
+- [ ] `listed BOOLEAN DEFAULT FALSE` on spaces
+- [ ] `GET /explore` — public, filters: sort by activity/members/created, language
+- [ ] Frontend: `/explore` — space cards with domain tags
 
 ---
 
-### 3.2 Cross-Community Semantic Search `[NICE]`
+### 3.2 Bot / Webhook API `[NICE]`
 
-- [ ] Migration: `CREATE EXTENSION IF NOT EXISTS vector` + `embedding vector(384)` on `messages`
-- [ ] Embedding job: compute 384-dim embedding per new message (local model via `fastembed-rs`)
-- [ ] `GET /search/similar?topic_id=:id&limit=10`
-  - [ ] Embed topic's first message, find nearest via `<=>` operator
-  - [ ] Filter to user's spaces only
-
----
-
-### 3.3 Bot / Webhook API `[NICE]`
-
-- [ ] Migration: `bot_users` (`id`, `space_id`, `name`, `api_key` hashed, `created_by`)
-- [ ] Migration: `webhooks` (`id`, `space_id`, `stream_id`, `topic_id nullable`, `url`, `secret`, `events TEXT[]`)
-- [ ] `POST /spaces/:slug/bots` — admin only, return plaintext API key once
-- [ ] Bot posts via `Authorization: Bot <api_key>`, rate limited 60 msg/min
-- [ ] Inbound webhook: `POST /webhooks/:id?token=:secret` → posts to configured topic
-- [ ] Outbound webhook: on new message → HTTP POST with HMAC-SHA256 signature
+- [ ] `bot_users` (id, space_id, name, api_key hashed, created_by)
+- [ ] `webhooks` (id, space_id, stream_id, topic_id nullable, url, secret, events TEXT[])
+- [ ] `POST /spaces/:slug/bots` — admin only, return plaintext key once
+- [ ] Bot posts via `Authorization: Bot <api_key>`, 60 msg/min
+- [ ] Outbound webhook: HMAC-SHA256 signed POST on new message
 - [ ] Frontend: Settings > Space > Integrations
 
 ---
 
-### 3.4 MCP Connector `[NICE]`
+### 3.3 Smart Topic Name Suggestion `[NICE]`
 
-- [ ] Implement MCP server in `crates/mcp`
-- [ ] Tools: `post_message`, `list_topics`, `search_messages`, `get_topic_summary`, `get_unread_topics`
-- [ ] Auth: same API key as bot users
-- [ ] Publish to MCP registry with README and example prompts
-- [ ] Optional `mcp` service in `docker-compose.yml` (disabled by default)
+- [ ] Client-side: extract first 80 chars, strip stop words, fuzzy match via Fuse.js
+- [ ] "Did you mean: {topic_name}?" chip in compose box
 
 ---
 
-### 3.5 Federation Research `[NICE]`
+### 3.4 Federation Research `[NICE]`
 
 - [ ] Open GitHub Discussion: "Federation protocol evaluation"
-- [ ] Document: implementation complexity, user benefit, protocol maturity, maintenance burden
 - [ ] Decision gate: no implementation until 3+ community operators formally request it
 
 ---
 
 ## Permanent Backlog — Excluded by Design
 
-| Feature | Reason Excluded |
+| Feature | Reason |
 |---|---|
-| Gamification (XP, streaks, levels) | Directly harms neurodivergent users. Validated by research. |
+| Gamification (XP, streaks, levels, leaderboards) | Directly harms neurodivergent users. Validated. |
 | Algorithmic feed / recommended content | Contradicts async, low-pressure model |
 | Ephemeral / disappearing messages in channels | Destroys institutional memory |
 | NFT / token-gating | Zero validated demand in target segments |
-| Built-in project management (tasks, boards) | Scope creep. Use webhook/bot integration instead |
-| Public follower graph | Social pressure layer, not community coherence |
-| Read receipts visible to sender | Documented anxiety harm. Default must be off. |
+| Built-in project management (tasks, boards) | Scope creep. Use webhook/bot integration |
+| Public follower graph | Social pressure, not community coherence |
+| Read receipts visible to sender | Documented anxiety harm. Always off. |
 | Algorithmic notification ranking | Removes user control |
+| Admin-awarded vanity badges | Replaced by self-sovereign credential system |
+| Advertising of any kind | Structurally incompatible with the model |
+| Per-seat pricing | Structurally incompatible with lurker-first design |
 
 ---
 
-## Open Questions (Need Data Before Deciding)
+## Open Questions — Resolved
 
-- [ ] **Pricing model**: seat-based ruled out (conflicts with lurker-first design). Evaluate: space-based flat fee vs usage-based vs hosted-only revenue. Decide before Phase 2.
-- [ ] **Mobile native app**: do not start until DAU/MAU on mobile web exceeds 40%. Measure in Phase 1.
-- [ ] **Message length limits**: measure median length in Phase 0 communities before setting a cap.
-- [ ] **Space federation**: block on Phase 3 evaluation. Do not implement earlier.
-- [ ] **Moderation tooling**: planning spike required before any public community launch. Schedule in Phase 1 planning, implement in Phase 1.
+| Question | Decision | Rationale |
+|---|---|---|
+| Pricing model | Space-based flat fee tiers, not seat-based | Seat-based punishes lurker communities |
+| Contributor payment mechanism | Stripe Connect (Phase 2) | Widest jurisdiction coverage |
+| Payout fraction default | 20% of space revenue | Calibrate against Phase 0 community data |
+| Mobile native app | Block until mobile web DAU/MAU > 40% | Measure in Phase 1 |
+| Message length cap | Block until median measured in Phase 0 | Don't cap before data |
+| Federation | Block on Phase 3 evaluation | Don't implement until 3+ operators request |
+| Moderation tooling | Planning spike in Phase 1 planning | Required before public community launch |
+| Intelligence API privacy threshold | 5 contributors minimum for any aggregate | Conservative; recalibrate in Phase 2 |

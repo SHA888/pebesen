@@ -1,4 +1,4 @@
-use meilisearch_sdk::{Client, Index};
+use meilisearch_sdk::Client;
 use pebesen_core::AppError;
 use serde_json::json;
 use uuid::Uuid;

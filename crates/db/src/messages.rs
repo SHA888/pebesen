@@ -36,7 +36,7 @@ pub async fn get_page(
             r#"
             SELECT id, topic_id, author_id, content, rendered, edited_at, deleted_at, created_at
             FROM messages
-            WHERE topic_id = $1 
+            WHERE topic_id = $1
             AND created_at < $2
             AND deleted_at IS NULL
             ORDER BY created_at ASC
@@ -53,7 +53,7 @@ pub async fn get_page(
             r#"
             SELECT id, topic_id, author_id, content, rendered, edited_at, deleted_at, created_at
             FROM messages
-            WHERE topic_id = $1 
+            WHERE topic_id = $1
             AND deleted_at IS NULL
             ORDER BY created_at ASC
             LIMIT $2
