@@ -18,7 +18,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Shared workspace dependencies
 - [x] `rustfmt.toml`, `clippy.toml`
 - [x] `cargo build` succeeds on empty crates
-- [x] `cargo install cargo-audit` — add to setup docs
+- [ ] `cargo install cargo-audit` — add to setup docs
 
 ### P.2 Frontend ✅
 - [x] SvelteKit + TypeScript + ESLint + Prettier
@@ -62,6 +62,21 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [ ] Add `pebesen-intelligence` crate stub to workspace (empty, Phase 2 implementation)
 - [ ] Add `CONTRIBUTOR_PAYOUT_FRACTION` (default `0.20`) to `.env.example`
 - [ ] Add `INTELLIGENCE_API_ENABLED` (default `false`) to `.env.example`
+
+---
+
+### 0.0.1 Cold Start Plan `[MUST]`
+
+> The first 10 communities determine what Pebesen becomes in the market's perception.
+> AGPL and self-hosting help but do not solve cold start. This must be planned before Phase 0 gate.
+
+- [ ] Identify 10 specific target communities by name — not segment descriptions, actual communities
+  - [ ] Criteria: active on Zulip/Discord/Slack, publicly expressing friction, OSS or research, ≥20 active contributors
+  - [ ] Document: current platform, documented pain, decision-maker contact
+- [ ] Define outreach approach per community — not mass email, direct conversation with maintainers
+- [ ] Define success condition: what does "adopted" mean? (daily use for 30 days, not just signup)
+- [ ] Gate: at least 3 communities committed before Phase 0 MVP is declared ready
+- [ ] Document cold start plan in `docs/cold-start.md` (internal, not public)
 
 ---
 
@@ -752,6 +767,27 @@ Wire contribution recording into existing handlers:
 - [ ] `docs/contributor-payouts.md`: how weights are computed, how payouts are calculated, opt-out instructions
 - [ ] Publish to GHCR via CI on tag: `ghcr.io/SHA888/pebesen:latest` + semver
 - [ ] Test full install on clean Ubuntu 24.04 LTS VPS (1GB RAM)
+
+---
+
+### 2.12 Prediction Ingestion — Schema Reservation `[SHOULD]`
+
+> Schema slot reserved in Phase 2 so Phase 3 implementation requires no breaking migration.
+> Implementation activates only when Teri has live deployments generating real signal.
+> See ARCHITECTURE.md `space_predictions` table and Intelligence API endpoints.
+
+- [ ] Migration `0019_space_predictions.sql` — create `space_predictions` table (see ARCHITECTURE.md)
+- [ ] `POST /v1/intelligence/spaces/:slug/predictions` — receive Teri write-back
+  - [ ] Require space-scoped intelligence API key
+  - [ ] Validate payload shape: type, confidence, horizon_days, generated_at, expires_at
+  - [ ] Insert into `space_predictions`
+  - [ ] Return `{ prediction_id }`
+- [ ] `POST /v1/intelligence/spaces/:slug/predictions/:id/action` — moderator marks actioned
+  - [ ] Sets `actioned_at = NOW()`
+  - [ ] This timestamp is the calibration signal fed back to Teri
+- [ ] Frontend: space admin panel — pending predictions list (topic signals, contributor trajectories, health risks)
+  - [ ] Each prediction: type, confidence, horizon, dismiss or mark actioned
+  - [ ] Hidden by default until space owner enables `teri_integration` in settings
 
 ---
 

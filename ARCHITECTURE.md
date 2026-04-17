@@ -325,6 +325,30 @@ CREATE TABLE contributor_payouts (
                         CHECK (status IN ('pending', 'processing', 'paid', 'failed')),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- 0019: Space Predictions (Phase 3 — schema slot reserved in Phase 2)
+-- Receives feedback from Teri simulations via CommunityFeedback write-back interface.
+-- actioned_at is the calibration signal: predictions acted on and confirmed accurate
+-- improve Teri's confidence weighting for that community in future simulations.
+CREATE TABLE space_predictions (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    space_id        UUID NOT NULL REFERENCES spaces(id),
+    source          TEXT NOT NULL DEFAULT 'teri',
+    type            TEXT NOT NULL CHECK (type IN (
+                        'topic_signal',           -- topic likely to emerge or accelerate
+                        'contributor_trajectory', -- contributor likely to become domain anchor
+                        'health_risk'             -- community dependency or churn risk
+                    )),
+    payload         JSONB NOT NULL,
+    confidence      NUMERIC(4,3),
+    horizon_days    INTEGER,
+    generated_at    TIMESTAMPTZ NOT NULL,
+    expires_at      TIMESTAMPTZ,
+    actioned_at     TIMESTAMPTZ    -- null until moderator acts; used for Teri calibration
+);
+CREATE INDEX idx_space_predictions_space     ON space_predictions(space_id);
+CREATE INDEX idx_space_predictions_type_exp  ON space_predictions(space_id, type, expires_at)
+    WHERE actioned_at IS NULL;
 ```
 
 ---
@@ -425,6 +449,18 @@ GET  /v1/intelligence/spaces/:slug/experts
 
 GET  /v1/intelligence/spaces/:slug/topics/trending
      → topics with accelerating last_active + message velocity
+
+POST /v1/intelligence/spaces/:slug/predictions
+     → receive Teri simulation output (CommunityFeedback write-back)
+     → requires space-scoped intelligence API key
+     → payload: { type, payload, confidence, horizon_days, generated_at, expires_at }
+     → inserts into space_predictions table
+     → returns { prediction_id }
+
+POST /v1/intelligence/spaces/:slug/predictions/:id/action
+     → moderator marks a prediction as actioned
+     → sets actioned_at = NOW()
+     → this is the calibration signal fed back to Teri for confidence adjustment
 ```
 
 Privacy constraints enforced at query layer:
