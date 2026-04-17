@@ -83,8 +83,6 @@ Verified contributors get access to professional-tier subbranches. Communities g
 ### 4. B2B Community Intelligence API
 Structured, privacy-respecting community insight data sold to researchers, brands, consultancies, and policy teams. Not raw data scraping — aggregated, anonymized signals extracted from the structured topic/stream hierarchy.
 
-This is the Reddit AI licensing insight inverted: instead of selling historical data once to train models, sell ongoing structured signal on subscription to domain-relevant buyers.
-
 ---
 
 ## Who This Is For
@@ -134,22 +132,6 @@ The retention model is not engagement loops. It is accumulated, structured, irre
 
 ---
 
-## Defensibility Test
-
-Against the seven questions that matter for AI-era platforms:
-
-| Question | Answer |
-|---|---|
-| One giant company update away test? | No. Contributor revenue sharing and structured knowledge accumulation are not features a model update can replicate. |
-| Building a process or just using a model? | Process. The contribution primitive, topic structure, and revenue distribution are platform architecture, not AI outputs. |
-| Gets smarter with every user? | Yes. Expertise signal and community intelligence improve with contributor density in specific domains. |
-| Would users lose something irreplaceable if shut down? | Yes. Structured institutional knowledge with no equivalent export destination. |
-| Building a community or just an audience? | Community. Contributor revenue sharing creates economic alignment, not just content consumption. |
-| Value in the output or everything around it? | Everything around it. The structured topic graph, contribution history, and verified expertise layer are the moat. |
-| Building what the platform will do for free, or what it cannot? | What it cannot. Contributor-aligned economic model is structurally incompatible with advertiser-funded platforms. |
-
----
-
 ## Validation Status
 
 - **Stage 0**: Confirmed active migration intent across the messaging platform landscape. Documented workaround products proving unmet demand. Studied failure modes of prior entrants.
@@ -186,7 +168,6 @@ Against the seven questions that matter for AI-era platforms:
 - Docker & Docker Compose
 - Python 3.8+ (for pre-commit hooks)
 - uv
-- `cargo-audit` — installed automatically by `make setup`, or manually: `cargo install cargo-audit`
 
 ### Setup
 
