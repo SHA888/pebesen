@@ -152,3 +152,7 @@ yarn.lock
 .skill/
 .cursor/rules/skill-context.md
 .windsurf/rules/skill-context.md
+
+# Internal strategy documents (not for public repo)
+STRATEGY.md
+docs/cold-start.md
