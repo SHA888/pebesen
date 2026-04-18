@@ -7,5 +7,5 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Trigram similarity for text search and autocomplete
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- Vector similarity (for Phase 3 semantic search)
--- CREATE EXTENSION IF NOT EXISTS "vector";
+-- Vector similarity (pgvector) - required from day one
+CREATE EXTENSION IF NOT EXISTS "vector";

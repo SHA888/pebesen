@@ -30,7 +30,7 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] `docker-compose.yml` with postgres, redis, meilisearch, caddy, app (commented)
 - [x] `.env.example` with all variables
 - [x] Migration `0001_extensions.sql`: uuid-ossp, pg_trgm
-- [ ] **AMEND**: add `vector` extension to `0001_extensions.sql` — pgvector required from day one
+- [x] **AMEND**: add `vector` extension to `0001_extensions.sql` — pgvector required from day one
 - [x] `sqlx migrate run` succeeds
 
 ### P.4 CI Pipeline ✅
