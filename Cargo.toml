@@ -5,6 +5,7 @@ members = [
     "crates/db",
     "crates/search",
     "crates/notifications",
+    "crates/intelligence",
     "crates/bin",
 ]
 resolver = "2"

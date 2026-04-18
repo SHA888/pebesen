@@ -56,12 +56,12 @@ Progress states: `[ ]` not started · `[~]` in progress · `[x]` done
 > These must complete before any other Phase 0 migration is written.
 > The full schema is defined in ARCHITECTURE.md. Migrations implement it.
 
-- [ ] Amend `0001_extensions.sql`: add `CREATE EXTENSION IF NOT EXISTS "vector"`
-- [ ] Confirm `pgvector` available in postgres service in `docker-compose.yml`
-  - [ ] Use `pgvector/pgvector:pg16` image instead of `postgres:16-alpine`
-- [ ] Add `pebesen-intelligence` crate stub to workspace (empty, Phase 2 implementation)
-- [ ] Add `CONTRIBUTOR_PAYOUT_FRACTION` (default `0.20`) to `.env.example`
-- [ ] Add `INTELLIGENCE_API_ENABLED` (default `false`) to `.env.example`
+- [x] Amend `0001_extensions.sql`: add `CREATE EXTENSION IF NOT EXISTS "vector"`
+- [x] Confirm `pgvector` available in postgres service in `docker-compose.yml`
+  - [x] Use `pgvector/pgvector:pg16` image instead of `postgres:16-alpine`
+- [x] Add `pebesen-intelligence` crate stub to workspace (empty, Phase 2 implementation)
+- [x] Add `CONTRIBUTOR_PAYOUT_FRACTION` (default `0.20`) to `.env.example`
+- [x] Add `INTELLIGENCE_API_ENABLED` (default `false`) to `.env.example`
 
 ---
 
