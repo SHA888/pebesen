@@ -1,4 +1,10 @@
-.PHONY: help setup dev deps clean build test lint format check-security db-up db-down db-reset migrate
+.PHONY: help setup dev deps clean build test lint format check-security db-up db-down db-reset migrate check-docker install-docker
+
+# OS Detection
+UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -m)
+OS_ID := $(shell grep -oP '(?<=^ID=).+' /etc/os-release 2>/dev/null || echo 'unknown')
+OS_LIKE := $(shell grep -oP '(?<=^ID_LIKE=).+' /etc/os-release 2>/dev/null || echo 'unknown')
 
 # Default target
 help:
@@ -8,6 +14,8 @@ help:
 	@echo "  setup          - Install all dependencies and set up environment"
 	@echo "  deps           - Install/update all project dependencies"
 	@echo "  check-security - Run security audits on dependencies"
+	@echo "  check-docker   - Check if Docker is installed"
+	@echo "  install-docker - Install Docker (auto-detects OS)"
 	@echo ""
 	@echo "Development:"
 	@echo "  dev            - Start full development environment"
@@ -31,6 +39,87 @@ help:
 	@echo "  clean          - Clean build artifacts and caches"
 	@echo "  reindex        - Rebuild search index"
 	@echo "  logs           - Show development logs"
+
+# Docker Management
+check-docker:
+	@echo "Checking Docker installation..."
+	@which docker > /dev/null 2>&1 && { echo "✓ Docker is installed"; docker --version; } || { echo "✗ Docker is not installed. Run 'make install-docker' to install."; exit 1; }
+	@docker compose version > /dev/null 2>&1 && echo "✓ Docker Compose is available" || { echo "✗ Docker Compose is not available"; exit 1; }
+
+install-docker:
+	@echo "Installing Docker for OS: $(OS_ID) (like: $(OS_LIKE))..."
+ifeq ($(UNAME_S),Linux)
+ifeq ($(OS_ID),ubuntu)
+	@echo "Detected Ubuntu. Installing Docker..."
+	@sudo apt-get update
+	@sudo apt-get install -y ca-certificates curl gnupg
+	@sudo install -m 0755 -d /etc/apt/keyrings
+	@curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+	@sudo chmod a+r /etc/apt/keyrings/docker.gpg
+	@echo "deb [arch=$(shell dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(shell . /etc/os-release && echo $$VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	@sudo apt-get update
+	@sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+	@echo "Docker installed successfully!"
+	@echo "Adding current user to docker group..."
+	@sudo usermod -aG docker $(USER)
+	@echo "Please log out and log back in for group changes to take effect."
+else ifeq ($(OS_ID),debian)
+	@echo "Detected Debian. Installing Docker..."
+	@sudo apt-get update
+	@sudo apt-get install -y ca-certificates curl gnupg
+	@sudo install -m 0755 -d /etc/apt/keyrings
+	@curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+	@sudo chmod a+r /etc/apt/keyrings/docker.gpg
+	@echo "deb [arch=$(shell dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(shell . /etc/os-release && echo $$VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	@sudo apt-get update
+	@sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+	@echo "Docker installed successfully!"
+	@sudo usermod -aG docker $(USER)
+	@echo "Please log out and log back in for group changes to take effect."
+else ifeq ($(OS_ID),fedora)
+	@echo "Detected Fedora. Installing Docker..."
+	@sudo dnf -y install dnf-plugins-core
+	@sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+	@sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+	@sudo systemctl start docker
+	@sudo systemctl enable docker
+	@echo "Docker installed successfully!"
+	@sudo usermod -aG docker $(USER)
+	@echo "Please log out and log back in for group changes to take effect."
+else ifeq ($(OS_ID),arch)
+	@echo "Detected Arch Linux. Installing Docker..."
+	@sudo pacman -Syu --noconfirm docker docker-compose
+	@sudo systemctl start docker
+	@sudo systemctl enable docker
+	@echo "Docker installed successfully!"
+	@sudo usermod -aG docker $(USER)
+	@echo "Please log out and log back in for group changes to take effect."
+else ifneq (,$(findstring rhel,$(OS_LIKE)))
+	@echo "Detected RHEL-based system. Installing Docker..."
+	@sudo dnf install -y yum-utils
+	@sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+	@sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+	@sudo systemctl start docker
+	@sudo systemctl enable docker
+	@echo "Docker installed successfully!"
+	@sudo usermod -aG docker $(USER)
+	@echo "Please log out and log back in for group changes to take effect."
+else
+	@echo "Unsupported Linux distribution: $(OS_ID)"
+	@echo "Please install Docker manually: https://docs.docker.com/engine/install/"
+	@exit 1
+endif
+else ifeq ($(UNAME_S),Darwin)
+	@echo "Detected macOS."
+	@which brew > /dev/null 2>&1 || { echo "Homebrew is required. Install from https://brew.sh"; exit 1; }
+	@echo "Installing Docker via Homebrew..."
+	@brew install --cask docker
+	@echo "Docker installed! Please start Docker Desktop from Applications."
+else
+	@echo "Unsupported operating system: $(UNAME_S)"
+	@echo "Please install Docker manually: https://docs.docker.com/engine/install/"
+	@exit 1
+endif
 
 # Setup & Dependencies
 setup:
@@ -99,7 +188,7 @@ build:
 	@echo "Build complete!"
 
 # Database Management
-db-up:
+db-up: check-docker
 	@echo "Starting database services..."
 	docker compose up -d postgres redis meilisearch
 	@echo "Waiting for services to be ready..."

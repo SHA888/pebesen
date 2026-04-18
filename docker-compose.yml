@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: pebesen
       POSTGRES_USER: pebesen
-      POSTGRES_PASSWORD: pebesen_dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pebesen_dev_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -37,7 +37,7 @@ services:
     image: getmeili/meilisearch:latest
     container_name: pebesen_meilisearch
     environment:
-      MEILI_MASTER_KEY: pebesen_dev_master_key
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-pebesen_dev_master_key}
       MEILI_ENV: development
     ports:
       - "7701:7700"
@@ -74,11 +74,11 @@ services:
   #   build: .
   #   container_name: pebesen_app
   #   environment:
-  #     DATABASE_URL: postgresql://pebesen:your_password@localhost:5434/pebesen
+  #     DATABASE_URL: ${DATABASE_URL}
   #     REDIS_URL: redis://redis:6379
   #     MEILISEARCH_URL: http://meilisearch:7700
-  #     MEILISEARCH_MASTER_KEY: pebesen_dev_master_key
-  #     JWT_SECRET: your-super-secret-jwt-key-at-least-64-characters-long
+  #     MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY}
+  #     JWT_SECRET: ${JWT_SECRET}
   #     SERVER_HOST: 0.0.0.0
   #     SERVER_PORT: 3000
   #     FRONTEND_URL: http://localhost:3000
