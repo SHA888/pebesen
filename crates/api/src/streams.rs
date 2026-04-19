@@ -145,7 +145,7 @@ pub async fn list_streams(
         .map_err(|e| AppError::Internal(format!("Database error: {}", e)))?;
 
     // Return ordered by created_at ASC
-    streams.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    streams.sort_by_key(|a| a.created_at);
 
     let stream_dtos: Vec<StreamDTO> = streams
         .into_iter()
